@@ -150,7 +150,7 @@ def blochSim(
     E1_1 = E1 - 1
     γ2πdt = 2*π*γ*dt  # Hz/Gauss -> Rad/Gauss
 
-    M1 = M.clone()  # ^OPT: debug this
+    M1 = M.clone()
 
     for t in range(B.shape[-1]):
         u, ϕ = B2UΦ(B[..., t], γ2πdt)
