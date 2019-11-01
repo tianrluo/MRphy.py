@@ -101,9 +101,9 @@ def UΦRot(U, Φ, Vi):
 def blochSim_1Step(M, M1, b, E1, E1_1, E2, γ2πdt):
     """
         blochSim_1Step(M, M1, b, E1, E1_1, E2, γ2πdt)
-    ^OPT debug to correct inplace
     *INPUTS*:
     - M (N, nM, xyz), Magnetic spins, assumed equilibrium magnitude `[0 0 1]`.
+    - M1 (N, nM, xyz), pre-allocated variable for `UΦRot` output.
     - b (N, nM, xyz) "Gauss", B-effective, magnetic field applied.
     - E1 (N, 1,) a.u., T1 reciprocal exponential, global.
     - E1_1 (N, 1,) a.u., T1 reciprocal exponential subtracted by `1`, global.
@@ -118,12 +118,12 @@ def blochSim_1Step(M, M1, b, E1, E1_1, E2, γ2πdt):
     if torch.any(ϕ != 0):
         M1 = UΦRot(u, ϕ, M)
     # Relaxation
-    M1[:, :, 1:2] *= E2
-    M1[:, :, 3] *= E1
-    M1[:, :, 3] -= E1_1
+    M1[:, :, 0:2] *= E2
+    M1[:, :, 2] *= E1
+    M1[:, :, 2] -= E1_1
 
     M, M1 = M1, M
-    return M
+    return M, M1
 
 
 def blochSim(

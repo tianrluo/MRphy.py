@@ -1,6 +1,9 @@
 # MRphy.py
 
-Yet a pytorch based Bloch simulator
+Yet a pytorch based Bloch simulator.
+[![codecov](https://codecov.io/gh/tianrluo/MRphy.py/branch/master/graph/badge.svg?token=83sKL5NADl)](https://codecov.io/gh/tianrluo/MRphy.py)
+[![Actions Status](https://github.com/tianrluo/MRphy.py/workflows/Python%20package/badge.svg)](https://github.com/tianrluo/MRphy.py/actions)
+
 
 ## Installation
 
