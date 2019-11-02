@@ -4,6 +4,14 @@ Yet a pytorch based Bloch simulator.
 [![codecov](https://codecov.io/gh/tianrluo/MRphy.py/branch/master/graph/badge.svg?token=83sKL5NADl)](https://codecov.io/gh/tianrluo/MRphy.py)
 [![Actions Status](https://github.com/tianrluo/MRphy.py/workflows/Python%20package/badge.svg)](https://github.com/tianrluo/MRphy.py/actions)
 
+## Branches
+
+- `master`: Stable;
+- `dev`: Ocassionally `git squash`'d, `git push --force`'d;
+- `dev_cache`: Constantly `git push --force`'d.
+
+Developments are mostly done on `dev_cache`; when they have passed local checks, `dev` will be `git rebase`'d to `dev_cache`, and sent for CI tests.
+When enough updates have been accumulated, `dev` will be git squashed into one large commit, followed by having `master`-branch `git rebase`'d onto it.
 
 ## Installation
 
