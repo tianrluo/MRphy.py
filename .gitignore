@@ -24,4 +24,5 @@
 *temp/
 *.vector_cache/
 *data/
+*prof/
 
