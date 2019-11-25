@@ -1,4 +1,3 @@
-import sys
 from setuptools import setup, find_packages
 
 REQUIRED_PACKAGES = ['torch>=1.3', 'numpy']
@@ -8,7 +7,7 @@ with open("README.md", "r") as h:
 
 setup(
     name="mrphy",
-    version="0.0.5",
+    version="0.1.0",
     author="Tianrui Luo",
     author_email="tianrluo@umich.edu",
     description="A Pytorch based tool for MR physics simulations",

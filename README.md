@@ -24,7 +24,7 @@ pip install .
 
 ## Demos
 
-Check out `./test/test_sims.py`.
+Check out files under `./test`.
 After installation, one can quickly play with the tests through:
 
 ```sh

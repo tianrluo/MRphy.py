@@ -1,271 +1,178 @@
+from typing import Tuple
+
 import torch
-import torch.nn.functional as F
-from torch import tensor
+from torch import tensor, Tensor
+from torch.autograd import Function
+from torch.autograd.function import _ContextMethodMixin as CTX
 
 from mrphy import γH, dt0, π, inf
 
-# TODO:
-# - Faster init of AB in `beff2ab`
-# - Allow Vo to be allocated outside `beff2uϕ`, `uϕrot` and `rfgr2beff`
 
+class BlochSim(Function):
 
-def rfgr2beff(
-        rf: torch.Tensor, gr: torch.Tensor, loc: torch.Tensor,
-        Δf: torch.Tensor = None, b1Map: torch.Tensor = None,
-        γ: torch.Tensor = None):
-    """
-        Beff = rfgr2beff(rf, gr, loc, Δf, b1Map, γ)
-    *INPUTS*:
-    - `rf` (N,xy, nT,(nCoils)) "Gauss", `xy` for separating real and imag part.
-    - `gr` (N,xyz,nT) "Gauss/cm"
-    *OPTIONALS*:
-    - `loc`(N,*Nd,xyz) "cm", locations.
-    - `Δf` (N,*Nd,) "Hz", off-resonance.
-    - `b1Map` (N,*Nd,xy,nCoils) a.u., , transmit sensitivity.
-    - `γ`(N,1) "Hz/Gauss", gyro-ratio
-    *OUTPUTS*:
-    - `Beff`  (N,*Nd,xyz,nT)
-    """
-    assert(rf.device == gr.device == loc.device)
-    device = rf.device
+    @staticmethod
+    def forward(
+            ctx: CTX, Mi: Tensor, Beff: Tensor, T1: Tensor, T2: Tensor,
+            γ: Tensor, dt: Tensor) -> Tensor:
+        NNd, nT = Beff.shape[:-2], Beff.shape[-1]
 
-    shape = loc.shape
-    N, Nd, d = shape[0], shape[1:-1], loc.dim()-2
+        # %% Preprocessing
+        E1, E2, γ2πdt = torch.exp(-dt/T1), torch.exp(-dt/T2), 2*π*γ*dt
+        E, e1_1 = torch.cat((E2, E2, E1), dim=-2), E1-1
+        Mi = Mi.clone()  # isolate
+        γBeff = γ2πdt*Beff
 
-    Bz = (loc.reshape(N, -1, 3) @ gr).reshape((N, *Nd, 1, -1))
+        # Pre-allocate intermediate variables, in case of overhead alloc's
+        u = γBeff.new_empty(NNd+(3, 1))
+        ϕ, cϕ, sϕ = (γBeff.new_empty(NNd+(1, 1)) for _ in range(3))
 
-    if Δf is not None:  # Δf: -> (N, *Nd, 1, 1); 3 from 1(dim-N) + 2(dim-xtra)
-        γ = (torch.Tensor([[γH]], device=device, dtype=Δf.dtype)
-             if (γ is None) else γ.to(device))
-        Δf, γ = map(lambda x: x.reshape(x.shape+(d+3-x.dim())*(1,)), (Δf, γ))
-        Bz += Δf/γ
+        # TODO: avoid cache when needs_input_grad is False
+        # %% Other variables to be cached
+        m0, Mhst = Mi[..., None], γBeff.new_empty(NNd+(3, nT))
 
-    # rf -> (N, *len(Nd)*(1,), xy, nT, (nCoils))
-    rf = rf.reshape((-1, *d*(1,))+rf.shape[1:])
-    # Real as `Bx`, Imag as `By`.
-    if b1Map is None:
-        if rf.dim() == Bz.dim()+1:  # (N, *len(Nd)*(1,), xy, nT, nCoils)
-            rf = torch.sum(rf, dim=-1)  # -> (N, *len(Nd)*(1,), xy, nT)
+        # %% Simulation. could we learn to live right.
+        for m1, γbeff in zip(Mhst.split(1, dim=-1), γBeff.split(1, dim=-1)):
+            # Rotation
+            torch.norm(γbeff, dim=-2, keepdim=True, out=ϕ)
+            ϕ.clamp_(min=1e-12)
+            torch.div(γbeff, ϕ, out=u)
 
-        Bx, By = rf[..., 0:1, :].expand_as(Bz), rf[..., 1:2, :].expand_as(Bz)
-    else:
-        b1Map = b1Map.to(device)
-        b1Map = b1Map[..., None, :]  # -> (N, *Nd, xy, 1, nCoils)
-        Bx = torch.sum((b1Map[..., 0:1, :, :]*rf[..., 0:1, :, :]
-                        - b1Map[..., 1:2, :, :]*rf[..., 1:2, :, :]),
-                       dim=-1).expand_as(Bz)  # -> (N, *Nd, x, nT)
-        By = torch.sum((b1Map[..., 0:1, :, :]*rf[:, :, 1:2, ...]
-                        + b1Map[..., 1:2, :, :]*rf[:, :, 0:1, ...]),
-                       dim=-1).expand_as(Bz)  # -> (N, *Nd, y, nT)
+            torch.cos(ϕ, out=cϕ), torch.sin(ϕ, out=sϕ)
+            utm0 = ϕ  # ϕ reused uᵀm₀
+            torch.sum(u*m0, dim=-2, keepdim=True, out=utm0)
+            # wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+            # m₁ = cϕ*m₀ + (1-cϕ)*uᵀm₀*u - sϕ*u×m₀
+            torch.cross(u, m0, dim=-2, out=m1)
+            m1.mul_(-sϕ).add_(cϕ*m0+(1-cϕ)*utm0*u)  # -sϕ: BxM -> MxB
 
-    Beff = torch.cat([Bx, By, Bz], dim=-2)  # -> (N, *Nd, xyz, nT)
-    return Beff
+            # Relaxation
+            m1.mul_(E)
+            m1[..., 2:3, :].sub_(e1_1)
 
+            m0 = m1
 
-def beff2uϕ(Beff: torch.Tensor, γ2πdt: torch.Tensor, dim=-1):
-    """
-        U, Φ = beff2uϕ(Beff, γ2πdt)
-    *INPUTS*:
-    - `Beff` (N, *Nd, xyz) "Gauss", B-effective, magnetic field applied on `M`.
-    - `γ2πdt` (N, 1,) "Rad/Gauss", gyro ratio in radians, global.
-    *OPTIONALS*
-    - `dim` int. Indicate the `xyz`-dim, allow `Beff.shape != (N, *Nd, xyz)`
-    *OUTPUTS*:
-    - `U` (N, *Nd, xyz), rotation axis
-    - `Φ` (N, *Nd), rotation angle
-    """
-    U = F.normalize(Beff, dim=dim)
-    Φ = -torch.norm(Beff, dim=dim) * γ2πdt  # negate: BxM -> MxB
-    return U, Φ
+        ctx.save_for_backward(Mi, Mhst, γBeff, E, e1_1, γ2πdt)
+        Mo = Mhst[..., -1].clone()  # -> (N, *Nd, xyz)
+        return Mo
 
+    @staticmethod
+    def backward(ctx: CTX, grad_Mo: Tensor
+                 ) -> Tuple[Tensor, Tensor, None, None, None, None]:
+        # grads of configuration variables are not supported yet
+        needs_grad = ctx.needs_input_grad
+        grad_Beff = grad_Mi = grad_T1 = grad_T2 = grad_γ = grad_dt = None
 
-def uϕrot(U: torch.Tensor, Φ: torch.Tensor, Vi: torch.Tensor):
-    """
-        Vo = uϕrot(U, Φ, Vi)
-    Apply axis-angle, `U-Phi` rotation on `V`. Rotation is broadcasted on `V`.
-    <en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle>
+        if not any(needs_grad[0:2]):  # (Mi,Beff;T1,T2,γ,dt):
+            return grad_Mi, grad_Beff, grad_T1, grad_T2, grad_γ, grad_dt
 
-    *INPUTS*:
-    - `U`  (N, *Nd, xyz), 3D rotation axes, assumed unitary;
-    - `Φ`  (N, *Nd,), rotation angles;
-    - `Vi` (N, *Nd, xyz, (nV)), vectors to be rotated;
-    *OUTPUTS*:
-    - `Vo` (N, *Nd, xyz, (nV)), vectors rotated;
-    """
-    # No in-place op, repetitive alloc is nece. for tracking the full Jacobian.
-    (dim, Φ, U) = ((-1, Φ[..., None], U) if Vi.dim() == U.dim() else
-                   (-2, Φ[..., None, None], U[..., None]))
+        # %% Jacobians. If we turn back time,
+        # ctx.save_for_backward(Mhst, γBeff, E, e1_1, γ2πdt)
+        Mi, Mhst, γBeff, E, e1_1, γ2πdt = ctx.saved_tensors
+        NNd = γBeff.shape[:-2]
+        Mi = Mi[..., None]  # (N, *Nd, xyz, 1)
 
-    cΦ, sΦ = torch.cos(Φ), torch.sin(Φ)
+        # Pre-allocate intermediate variables, in case of overhead alloc's
+        h0, h1 = γBeff.new_empty(NNd+(3, 1)), (grad_Mo.clone())[..., None]
+        uxh1, m0xh1 = (γBeff.new_empty(NNd+(3, 1)) for _ in range(2))
+        ϕ, cϕ, sϕ, utm0, uth1 = (γBeff.new_empty(NNd+(1, 1)) for _ in range(5))
+        ϕis0 = γBeff.new_empty(NNd+(1, 1), dtype=torch.bool)
 
-    Vo = (cΦ*Vi + (1-cΦ)*torch.sum(U*Vi, dim=dim, keepdim=True)*U
-          + sΦ*torch.cross(U.expand_as(Vi), Vi, dim=dim))
+        m1 = Mhst.narrow(-1, -1, 1)
+        u_dflt = γBeff.new_tensor([[0.], [0.], [1.]])  # (xyz, 1)
+        for m0, γbeff in zip(reversed((Mi,)+Mhst.split(1, dim=-1)[:-1]),
+                             reversed(γBeff.split(1, dim=-1))):
+            # Relaxation:
+            h1.mul_(E)  # h₁ → h̃₁
 
-    return Vo
+            # Rotations:
+            torch.norm(γbeff, dim=-2, keepdim=True, out=ϕ)
+            ϕ.clamp_(min=1e-12)
+            γbeff.div_(ϕ)
+            u = γbeff  # γbeff reused as u
 
+            torch.logical_not(ϕ, out=ϕis0)
+            torch.cos(ϕ, out=cϕ), torch.sin(ϕ, out=sϕ)
 
-def beff2ab(
-        Beff: torch.Tensor,
-        T1: torch.Tensor = None, T2: torch.Tensor = None,
-        γ: torch.Tensor = None, dt: torch.Tensor = None):
-    """
-        beff2ab(Beff, T1=(Inf), T2=(Inf), γ=γ¹H, dt=(dt0))
-    Turn B-effective into Hargreave's 𝐴/𝐵, mat/vec, see: doi:10.1002/mrm.1170.
+            # Resolve singularities
+            if torch.any(ϕis0):
+                u[ϕis0[..., 0, 0]] = u_dflt  # TODO: Adaptive approach?
 
-    *INPUTS*:
-    - `Beff`: (N,*Nd,xyz,nT).
-    *OPTIONALS*:
-    - `T1` (N, 1,) "Sec", T1 relaxation, global.
-    - `T2` (N, 1,) "Sec", T2 relaxation, global.
-    - `γ` (N, 1,) "Hz/Gauss", gyro ratio in Hertz, global.
-    - `dt` (N, 1,) "Sec", dwell time, global.
-    *OUTPUTS*:
-    - `A` (N, *Nd, xyz, 3), `A[:,iM,:,:]` is the `iM`-th 𝐴.
-    - `B` (N, *Nd, xyz), `B[:,iM,:]` is the `iM`-th 𝐵.
-    """
-    shape = Beff.shape
+            torch.sum(u*h1, dim=-2, keepdim=True, out=uth1)  # uᵀh̃₁
+            torch.sum(u*m0, dim=-2, keepdim=True, out=utm0)  # uᵀm₀
+            torch.cross(u, h1, dim=-2, out=uxh1)             # u×h̃₁
+            torch.cross(m0, h1, dim=-2, out=m0xh1)           # m₀×h̃₁
 
-    # defaults
-    device, dtype = Beff.device, Beff.dtype
-    dkw = {'device': device, 'dtype': dtype}
-    T1 = tensor([[inf]], **dkw) if (T1 is None) else T1.to(device)
-    T2 = tensor([[inf]], **dkw) if (T2 is None) else T2.to(device)
-    γ = tensor([[γH]], **dkw) if (γ is None) else γ.to(device)
-    dt = tensor([[dt0]], **dkw) if (dt0 is None) else dt.to(device)
+            # h₀ ≔ ∂L/∂m₀
+            # wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+            # h₀ = cϕ*h₁ + (1-cϕ)*uᵀh₁*u + sϕ*u×h₁
+            torch.mul(h1, cϕ, out=h0)
+            cϕ.sub_(1)  # cϕ → cϕ-1
+            h0.add_(sϕ*uxh1-cϕ*uth1*u)
 
-    # reshaping
-    NNd, nT = shape[0:-2], shape[-1]
-    T1, T2, γ = map(lambda x: x.expand(NNd), (T1, T2, γ))
+            # ∂L/∂B[..., t]
+            cϕ.div_(ϕ), sϕ.div_(ϕ)  # cϕ-1, sϕ → (cϕ-1)/ϕ, sϕ/ϕ
+            if torch.any(ϕis0):  # handle division-by-0
+                cϕ[ϕis0], sϕ[ϕis0] = 0, 1
 
-    # C/Python `reshape/view` is different from Fortran/MatLab/Julia `reshape`
-    s1, s0 = NNd+(1, 1), NNd+(1, 4)
+            # m₁ → m̃₁ → (m̃₁ - sϕ⋅m₀)⨀(u×h̃₁)
+            m1[..., 2:3, :].add_(e1_1)
+            m1.div_(E)
+            m1.sub_(sϕ*m0).mul_(uxh1)
 
-    kw = {'device': Beff.device, 'dtype': Beff.dtype}
+            # h̃₁ → (cϕ-1)/ϕ*(uᵀm₀*h̃₁+uᵀh̃₁*m₀)
+            h1.mul_(utm0).add_(uth1*m0).mul_(cϕ)
 
-    AB = torch.cat([torch.ones(s1, **kw), torch.zeros(s0, **kw),
-                    torch.ones(s1, **kw), torch.zeros(s0, **kw),
-                    torch.ones(s1, **kw), torch.zeros(s1, **kw)],
-                   dim=-1).view(NNd+(3, 4))  # -> (N, *Nd, xyz, 3+1)
+            # (cϕ-1)/ϕ → (2*cϕ*uᵀh̃1*uᵀm₀+(u×h̃₁)ᵀm₁)
+            cϕ.mul_(2*uth1*utm0).add_(torch.sum(m1, dim=-2, keepdim=True))
 
-    E1, E2 = (torch.exp(-dt/T1)[..., None],        # (N, 1, 1)
-              torch.exp(-dt/T2)[..., None, None])  # (N, 1, 1, 1)
-    E1_1 = E1.squeeze(dim=-1) - 1
-    γ2πdt = 2*π*γ*dt  # Hz/Gauss -> Rad/Gauss
+            # u → (-(2*cϕ*uᵀh̃1*uᵀm₀+(u×h̃₁)ᵀm₁)*u
+            #      +sϕ/ϕ*m₀×h̃₁
+            #      +(cϕ-1)/ϕ*(uᵀm₀*h̃₁+uᵀh̃₁*m₀)) ≡ ∂L/∂B[..., t]
+            grad_beff = u  # u (γbeff) is re-reused as grad_beff
+            grad_beff.mul_(-cϕ).add_(m0xh1.mul_(sϕ).add_(h1))
 
-    # simulation
-    for t in range(nT):
-        u, ϕ = beff2uϕ(Beff[..., t], γ2πdt)
+            m1, h1, h0 = m0, h0, h1
 
-        if torch.any(ϕ != 0):
-            AB1 = uϕrot(u, ϕ, AB)
-        else:
-            AB1 = AB
+        # %% Clean up
+        grad_Beff = γBeff
+        grad_Beff.mul_(-γ2πdt)
 
-        # Relaxation
-        AB1[..., 0:2, :] *= E2
-        AB1[..., 2, :] *= E1
-        AB1[..., 2, 3] -= E1_1
-        AB, AB1 = AB1, AB
-
-    A, B = AB[..., 0:3], AB[..., 3]
-
-    return A, B
-
-
-def blochsim_1step(
-        M: torch.Tensor, M1: torch.Tensor, b: torch.Tensor,
-        E1: torch.Tensor, E1_1: torch.Tensor, E2: torch.Tensor,
-        γ2πdt: torch.Tensor):
-    """
-        blochsim_1step(M, M1, b, E1, E1_1, E2, γ2πdt)
-    *INPUTS*:
-    - `M` (N, *Nd, xyz), Magnetic spins, assumed equilibrium magnitude [0 0 1]
-    - `M1` (N, *Nd, xyz), pre-allocated variable for `uϕrot` output.
-    - `b` (N, *Nd, xyz) "Gauss", B-effective, magnetic field applied.
-    - `E1` (N, 1,) a.u., T1 reciprocal exponential, global.
-    - `E1_1` (N, 1,) a.u., T1 reciprocal exponential subtracted by `1`, global.
-    - `E2` (N, 1,) a.u., T2 reciprocal exponential, global.
-    - `γ2πdt` (N, 1,) "rad/Gauss", gyro ratio mutiplied by `dt`, global.
-    *OUTPUTS*:
-    - `M` (N, *Nd, xyz), Magetic spins after simulation.
-    """
-    u, ϕ = beff2uϕ(b, γ2πdt)
-
-    if torch.any(ϕ != 0):
-        M1 = uϕrot(u, ϕ, M)
-    else:
-        M1 = M
-    # Relaxation
-    M1[..., 0:2] *= E2[..., None]
-    M1[..., 2] *= E1
-    M1[..., 2] -= E1_1
-
-    M, M1 = M1, M
-    return M, M1
+        grad_Mi = h1[..., 0] if needs_grad[0] else None
+        # forward(ctx, Mi, Beff; T1, T2, γ, dt):
+        return grad_Mi, grad_Beff, grad_T1, grad_T2, grad_γ, grad_dt
 
 
 def blochsim(
-        M: torch.Tensor, Beff: torch.Tensor,
-        T1: torch.Tensor = None, T2: torch.Tensor = None,
-        γ: torch.Tensor = None, dt: torch.Tensor = None):
+        Mi: Tensor, Beff: Tensor,
+        T1: Tensor = None, T2: Tensor = None,
+        γ: Tensor = None, dt: Tensor = None) -> Tensor:
     """
     *INPUTS*:
-    - `M` (N, *Nd, xyz), Magnetic spins, assumed equilibrium magnitude [0 0 1]
-    - `Beff` (N, *Nd, xyz, nT) "Gauss", B-effective, magnetic field applied.
+    - `Mi` (N, *Nd, xyz), Magnetic spins, assumed equilibrium [0 0 1]
+    - `Beff` (N, *Nd, xyz, nT) "Gauss", B-effective, magnetic field.
     *OPTIONALS*:
     - `T1` (N, *Nd,) "Sec", T1 relaxation.
     - `T2` (N, *Nd,) "Sec", T2 relaxation.
     - `γ`  (N, *Nd,) "Hz/Gauss", gyro ratio in Hertz.
     - `dt` (N, 1, ) "Sec", dwell time.
     *OUTPUTS*:
-    - `M` (N, *Nd, xyz), Magetic spins after simulation.
+    - `Mo` (N, *Nd, xyz), Magetic spins after simulation.
     *Notes*:
-      spin history during simulations is not provided at the moment.
+      Storing history for `U`, `Φ` and `UtM0` etc., which are also used in
+      `backward`, may avoid redundant computation, but comsumes more RAM.
     """
-    assert(M.shape[:-1] == Beff.shape[:-2])
 
-    # defaults and move to the same device
-    device, dtype = M.device, M.dtype
+    # %% Defaults and move to the same device
+    assert(Mi.shape[:-1] == Beff.shape[:-2])
+    d = Beff.dim()
+    device, dtype = Mi.device, Mi.dtype
     Beff = Beff.to(device)
     dkw = {'device': device, 'dtype': dtype}
-    T1 = tensor([[inf]], **dkw) if (T1 is None) else T1.to(device)
-    T2 = tensor([[inf]], **dkw) if (T2 is None) else T2.to(device)
-    γ = tensor([[γH]], **dkw) if (γ is None) else γ.to(device)
-    dt = tensor([[dt0]], **dkw) if (dt0 is None) else dt.to(device)
+    dt = tensor(dt0, **dkw) if (dt0 is None) else dt.to(device)
+    γ = tensor(γH, **dkw) if (γ is None) else γ.to(device)
+    T1 = tensor(inf, **dkw) if (T1 is None) else T1.to(device)
+    T2 = tensor(inf, **dkw) if (T2 is None) else T2.to(device)
+    T1, T2, γ, dt = (x.reshape(x.shape+(d-x.dim())*(1,))
+                     for x in (T1, T2, γ, dt))  # (N, *Nd, :, :) compatible
 
-    # reshaping
-    d = M.dim()-1
-    T1, T2, γ = map(lambda x: x.reshape(x.shape+(d-x.dim())*(1,)), (T1, T2, γ))
-
-    E1, E2 = torch.exp(-dt/T1), torch.exp(-dt/T2)[..., None]
-    E1_1 = E1 - 1
-    γ2πdt = 2*π*γ*dt  # Hz/Gauss -> Rad/Gauss
-
-    # simulation
-    for t in range(Beff.shape[-1]):
-        u, ϕ = beff2uϕ(Beff[..., t], γ2πdt)
-        if torch.any(ϕ != 0):
-            M1 = uϕrot(u, ϕ, M)
-        else:
-            M1 = M
-        # Relaxation
-        M1[..., 0:2] *= E2
-        M1[..., 2] *= E1
-        M1[..., 2] -= E1_1
-
-        M, M1 = M1, M
-
-    return M
-
-
-def blochsim_ab(M: torch.Tensor, A: torch.Tensor, B: torch.Tensor):
-    """
-    *INPUTS*:
-    - `M` (N, *Nd, xyz), Magnetic spins, assumed equilibrium magnitude [0 0 1]
-    - `A` (N, *Nd, xyz, 3), `A[:,iM,:,:]` is the `iM`-th 𝐴.
-    - `B` (N, *Nd, xyz), `B[:,iM,:]` is the `iM`-th 𝐵.
-    *INPUTS*:
-    - `M` (N, *Nd, xyz), Result magnetic spins
-    """
-    M = (A @ M[..., None]).squeeze_(dim=-1) + B
-    return M
+    return BlochSim.apply(Mi, Beff, T1, T2, γ, dt)

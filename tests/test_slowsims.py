@@ -1,14 +1,13 @@
 from pytest import approx
+import numpy as np
 import torch
 from torch import tensor, cuda
 
 from mrphy import γH, dt0, π
-from mrphy import beffective, sims, slowsims
-
-import time
+from mrphy import beffective, slowsims
 
 
-class Test_sims:
+class Test_slowsims:
 
     device = torch.device('cuda' if cuda.is_available() else 'cpu')
     # device = torch.device('cpu')
@@ -22,25 +21,20 @@ class Test_sims:
     dt = tensor([[dt0]], device=device, dtype=dtype)   # Sec
 
     def test_blochsims(self):
-        """
-        *Note*:
-        This test relies on the correctness of `test_slowsims.py`.
-        """
 
-        print('\n')
         dkw, atol = self.dkw, self.atol
         γ, dt = self.γ, self.dt
 
         # spins  # (1,nM,xyz)
-        M0 = torch.rand((1, 16*16*2, 3), **dkw)
-        # M0 = torch.rand((1, 32*32*20, 3), **dkw)
+        M0 = tensor([[[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]], **dkw)
         N, nM, nT = M0.shape[0], M0.shape[1], 512
         Nd = (nM,)
 
-        M0.requires_grad = True
-
         # parameters: Sec; cm.
         T1, T2 = tensor([[1.]], **dkw), tensor([[4e-2]], **dkw)
+
+        E1, E2, γ2πdt = torch.exp(-dt/T1), torch.exp(-dt/T2), 2*π*γ*dt
+        E1_1 = E1 - 1
 
         loc_x = torch.linspace(-1., 1., steps=nM, **dkw).reshape((N,)+Nd)
         loc_y = torch.linspace(-1., 1., steps=nM, **dkw).reshape((N,)+Nd)
@@ -53,46 +47,49 @@ class Test_sims:
         # pulse: Sec; Gauss; Gauss/cm.
         pulse_size = (N, 1, nT)
         t = torch.arange(0, nT, **dkw).reshape(pulse_size)
-        rf = 10*torch.cat([torch.cos(t/nT*2*π),  # (1,xy,nT,nCoils)
+        rf = 10*torch.cat([torch.cos(t/nT*2*π),              # (1,xy,nT,nCoils)
                            torch.sin(t/nT*2*π)], 1)[..., None]
         gr = torch.cat([torch.ones(pulse_size, **dkw),
                         torch.zeros(pulse_size, **dkw),
                         10*torch.atan(t - round(nT/2))/π], 1)  # (1,xyz,nT)
 
-        # rf.requires_grad, gr.requires_grad = True, True
+        rf.requires_grad, gr.requires_grad = True, True
+
         beff = beffective.rfgr2beff(rf, gr, loc, Δf, b1Map, γ)
-        beff.requires_grad = True
 
-        # %% sim
-        t = time.time()
-        Mo_1 = slowsims.blochsim(M0, beff, T1=T1, T2=T2, γ=γ, dt=dt)
-        print('forward: slowsims.blochsim', time.time() - t)
+        A, B = beffective.beff2ab(beff, E1=E1, E2=E2, γ=γ, dt=dt)
 
-        res1 = torch.sum(Mo_1)
-        t = time.time()
-        res1.backward()  # keep graph to check `bar.backward()`
-        print('backward: slowsims.blochsim', time.time() - t)
-        grad_M0_1 = M0.grad.clone().cpu().numpy()
-        grad_beff_1 = beff.grad.clone().cpu().numpy()
+        # sim
+        Mo1 = slowsims.blochsim(M0, beff, T1=T1, T2=T2, γ=γ, dt=dt)
 
-        M0.grad, beff.grad = None, None
+        Mo2, Mo_tmp = M0.clone(), M0.clone()
+        for t in range(nT):
+            Mo2, _ = slowsims.blochsim_1step(Mo2, Mo_tmp, beff[..., t],
+                                             E1, E1_1, E2, γ2πdt)
 
-        t = time.time()
-        Mo_2 = sims.blochsim(M0, beff, T1=T1, T2=T2, γ=γ, dt=dt)
-        print('forward: sims.blochsim', time.time() - t)
+        Mo3 = slowsims.blochsim_ab(M0, A, B)
 
-        res2 = torch.sum(Mo_2)
-        t = time.time()
-        res2.backward()  # keep graph to check `bar.backward()`
-        print('backward: sims.blochsim', time.time() - t)
-        grad_M0_2 = M0.grad.clone().cpu().numpy()
-        grad_beff_2 = beff.grad.clone().cpu().numpy()
+        # assertion
+        Mo0 = np.array(
+            [[[0.559535641648385,  0.663342640621335, 0.416341441715101],
+              [0.391994737048090,  0.210182892388552, -0.860954821972489],
+              [-0.677062008711222, 0.673391604920576, -0.143262993311057]]])
+        ref = approx(Mo0, abs=atol)
 
-        # %% assertion
-        assert(approx(grad_M0_1, abs=atol) == grad_M0_2)
-        assert(approx(grad_beff_1, abs=atol) == grad_beff_2)
+        f1, f2, f3 = (x.detach().cpu().numpy() == ref for x in (Mo1, Mo2, Mo3))
+        assert(f1 and f2 and f3)
+
+        # Verify gradients can chain rule back to `rf` and `gr`
+        foo = torch.sum(Mo1)
+        foo.backward(retain_graph=True)  # keep graph to check `bar.backward()`
+        print(torch.sum(rf.grad), torch.sum(gr.grad))
+        rf.grad = gr.grad = None  # clear grads from `foo`
+
+        bar = torch.sum(Mo3)
+        bar.backward()
+        print(torch.sum(rf.grad), torch.sum(gr.grad))
 
 
 if __name__ == '__main__':
-    tmp = Test_sims()
+    tmp = Test_slowsims()
     tmp.test_blochsims()

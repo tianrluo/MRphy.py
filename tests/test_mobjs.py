@@ -28,7 +28,7 @@ class Test_mobjs:
 
     def test_mobjs(self):
         kw, atol = self.dkw, self.atol
-        γ, dt = self.γ, self.dt
+        γ, dt = self.γ, dt0  # For test coverage, not using self.dt here.
 
         N, Nd, nT = 1, (3, 3, 3), 512
         nT = 512

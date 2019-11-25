@@ -1,15 +1,16 @@
 import torch
 from torch import tensor, Tensor
-from typing import TypeVar
+from typing import TypeVar, Type, Union
+from numbers import Number
 
-from mrphy import γH, dt0, inf
-from mrphy import sims, utils
+from mrphy import γH, dt0, T1G, T2G
+from mrphy import utils, beffective, sims
 
 """
 """
 
 # TODO:
-# - Abstract Class???
+# - Abstract Class
 
 
 Pulse = TypeVar('Pulse', bound='Pulse')
@@ -31,7 +32,7 @@ class Pulse(object):
     def __init__(
             self,
             rf: Tensor = None, gr: Tensor = None,
-            dt: Tensor = tensor([[dt0]]),
+            dt: Type[Union[Tensor, Number]] = dt0,
             desc: str = "generic pulse",
             device: torch.device = torch.device('cpu'),
             dtype: torch.dtype = torch.float32):
@@ -69,8 +70,11 @@ class Pulse(object):
     def __setattr__(self, k, v):
         assert (k not in ('device', 'dtype')), "'%s' not writable" % k
 
-        if k not in ('desc', 'dtype', 'device'):
-            v = v.to(device=self.device, dtype=self.dtype)
+        if k in ('rf', 'gr', 'dt'):
+            if k == 'dt' and isinstance(v, Number):
+                v = tensor(v, device=self.device, dtype=self.dtype)
+            else:
+                v = v.to(device=self.device, dtype=self.dtype)
 
         if (k == 'gr'):
             shape = self.rf.shape
@@ -96,8 +100,9 @@ class Pulse(object):
         *OUTPUTS*:
         - `beff`  (N,*Nd,xyz,nT)
         """
-        return sims.rfgr2beff(self.rf, self.gr, loc.to(device=self.device),
-                              Δf=Δf, b1Map=b1Map, γ=γ)
+        return beffective.rfgr2beff(self.rf, self.gr,
+                                    loc.to(device=self.device), Δf=Δf,
+                                    b1Map=b1Map, γ=γ)
 
     def to(self, device: torch.device = torch.device('cpu'),
            dtype: torch.dtype = torch.float32) -> Pulse:
@@ -111,13 +116,15 @@ class Pulse(object):
 
 class SpinArray(object):
     """
-    # Attributes:
-    - `shape` (1+len(Nd),) tuple, `(N, nx, (ny, (nz...)))`.
-    - `mask` (1, *self.shape[1:]) global mask across batches.
-    - `T1` (self.shape) "Sec", T1 relaxation.
-    - `T2` (self.shape) "Sec", T2 relaxation.
+        SpinArray(shape; mask, T1, T2, γ, M, device, dtype)
+    *INPUTS*:
+    - `shape` tuple( (N, nx, (ny, (nz,...))) ).
+    *OPTIONALS*:
+    - `T1` (self.shape) "Sec", T1 relaxation coeff.
+    - `T2` (self.shape) "Sec", T2 relaxation coeff.
     - `γ`  (self.shape) "Hz/Gauss", gyro ratio.
     - `M`  (self.shape)+(xyz,), spins, assumed equilibrium [0 0 1]
+    - `device` torch.device; `dtype` torch.dtype
     """
 
     __slots__ = ('shape', 'mask', 'device', 'dtype', 'T1', 'T2', 'γ', 'M')
@@ -125,9 +132,9 @@ class SpinArray(object):
     def __init__(
             self, shape: tuple,
             mask: Tensor = None,
-            T1: Tensor = None,
-            T2: Tensor = None,
-            γ: Tensor = None,
+            T1: Type[Union[Tensor, Number]] = T1G,
+            T2: Type[Union[Tensor, Number]] = T2G,
+            γ: Type[Union[Tensor, Number]] = γH,
             M: Tensor = None,
             device: torch.device = torch.device('cpu'),
             dtype: torch.dtype = torch.float32):
@@ -145,9 +152,9 @@ class SpinArray(object):
         self.mask = (torch.ones((1, *shape[1:]),
                                 dtype=torch.bool, device=device)
                      if (mask is None) else mask)
-        self.T1 = tensor([[inf]], **dkw) if (T1 is None) else T1
-        self.T2 = tensor([[inf]], **dkw) if (T2 is None) else T2
-        self.γ = tensor([[γH]], **dkw) if (γ is None) else γ
+        self.T1 = T1G if (T1 is None) else T1
+        self.T2 = T2G if (T2 is None) else T2
+        self.γ = γH if (γ is None) else γ
         self.M = tensor([[[0., 0., 1.]]], **dkw) if (M is None) else M
 
         return
@@ -163,9 +170,13 @@ class SpinArray(object):
     def __setattr__(self, k, v):
         assert (k not in ('shape', 'device', 'dtype')), "'%s' not writable" % k
 
+        if not isinstance(v, Tensor):
+            v = tensor(v, device=self.device)
+        else:
+            v = v.to(device=self.device)
+
         vs, s, d = v.shape, self.shape, self.ndim
 
-        v = v.to(device=self.device)
         # tensor.expand is aligned by trailing dimension
         if k in ('T1', 'T2', 'γ', 'M'):
             v.to(dtype=self.dtype)
@@ -199,7 +210,6 @@ class SpinArray(object):
 
         ks = ('T1', 'T2', 'γ')
         if doMask:
-            N, ndim = self.shape[0], self.ndim
             kw_bsim = {k: self.extract(getattr(self, k)) for k in ks}
             M = self.extract(self.M)
         else:
@@ -217,7 +227,7 @@ class SpinArray(object):
         This function does not save allocations but only updates the self.M
         """
         M = self.applypulse(p, loc, doMask=doMask, **kw)
-        self.M = (M if doMask == False else self.embed_(M, self.M))
+        self.M = (self.embed_(M, self.M) if doMask else M)
         return self.M
 
     def dim(self) -> int: return len(self.shape)
@@ -239,7 +249,7 @@ class SpinArray(object):
     def extract(self, v: Tensor, mask: Tensor = None) -> Tensor:
         N, ndim = self.shape[0], self.ndim
         mask = (mask if mask is not None else self.mask).expand(self.shape)
-        return v[mask].reshape((N,-1,)+v.shape[ndim:])
+        return v[mask].reshape((N, -1,)+v.shape[ndim:])
 
     def pulse2beff(
             self, p: Pulse, loc: Tensor, doMask: bool = False,
@@ -258,9 +268,8 @@ class SpinArray(object):
         p, loc = p.to(**dkw), loc.to(**dkw)
         γ = self.γ
         if doMask:
-            N, ndim = self.shape[0], self.ndim
             loc, γ, Δf = map(self.extract, (loc, γ, Δf))
-            if b1Map is not None: b1Map = self.extract(b1Map)
+            b1Map = (self.extract(b1Map) if b1Map else b1Map)
 
         return p.beff(loc, γ=γ, Δf=Δf, b1Map=b1Map)
 
@@ -279,11 +288,18 @@ class SpinArray(object):
 
 class SpinCube(object):
     """
-    # Attributes:
-    - `spinarray` (1,): a SpinArray object, below: `shape == spinarray.shape`.
-    - `fov`  (N, xyz,) "cm", field of view.
+        SpinCube(shape, fov; ofst, Δf, T1, T2, γ, M, device, dtype)
+    *INPUTS*:
+    - `shape` tuple( (N, nx, (ny, (nz,...))) ).
+    - `fov` (N, xyz,) "cm", field of view.
+    *OPTIONALS*:
     - `ofst` (N, xyz,) "cm", fov offset from iso-center.
-    - `Δf`   (self.shape) "Hz", off-resonance map.
+    - `Δf` (self.shape) "Hz", off-resonance map.
+    - `T1` (self.shape) "Sec", T1 relaxation coeff.
+    - `T2` (self.shape) "Sec", T2 relaxation coeff.
+    - `γ`  (self.shape) "Hz/Gauss", gyro ratio.
+    - `M`  (self.shape)+(xyz,), spins, assumed equilibrium [0 0 1]
+    - `device` torch.device; `dtype` torch.dtype
     """
 
     # SpinArray.__slots__ = ('shape', 'device', 'dtype', 'T1', 'T2', 'γ', 'M')
@@ -294,12 +310,13 @@ class SpinCube(object):
             fov: Tensor,
             ofst: Tensor = None,
             mask: Tensor = None,
-            Δf: Tensor = None,
-            T1=None, T2=None, γ=None, M=None,
+            Δf: Tensor = None, M=None,
+            T1: Type[Union[Tensor, Number]] = T1G,
+            T2: Type[Union[Tensor, Number]] = T2G,
+            γ: Type[Union[Tensor, Number]] = γH,
             device: torch.device = torch.device('cpu'),
             dtype: torch.dtype = torch.float32):
         """
-            SpinCube(shape, fov; ofst, Δf, T1, T2, γ, M, device, dtype)
         """
         super().__setattr__('spinarray',
                             SpinArray(shape, mask=mask, T1=T1, T2=T2, γ=γ, M=M,
@@ -340,7 +357,11 @@ class SpinCube(object):
         if k in SpinArray.__slots__:
             setattr(self.spinarray, k, v)
         else:
-            v = v.to(device=self.device, dtype=self.dtype)
+            if not isinstance(v, Tensor):
+                v = tensor(v, device=self.device, dtype=self.dtype)
+            else:
+                v = v.to(device=self.device, dtype=self.dtype)
+
             vs, s = v.shape, self.shape
 
             if k in ('Δf') and vs != s:
