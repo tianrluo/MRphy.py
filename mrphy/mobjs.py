@@ -268,7 +268,7 @@ class SpinArray(object):
         p, loc = p.to(**dkw), loc.to(**dkw)
         γ = self.γ
         if doMask:
-            loc, γ, Δf = map(self.extract, (loc, γ, Δf))
+            loc, γ, Δf = (self.extract(x) for x in (loc, γ, Δf))
             b1Map = (self.extract(b1Map) if b1Map else b1Map)
 
         return p.beff(loc, γ=γ, Δf=Δf, b1Map=b1Map)
