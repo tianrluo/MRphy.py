@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from torch import tensor, cuda
 
-from mrphy import γH, dt0, π
+from mrphy import γH, dt0, π, _slice
 from mrphy import mobjs
 
 # TODO:
@@ -20,9 +20,10 @@ class Test_mobjs:
 
     dkw = {'dtype': dtype, 'device': device}
 
-    γ = tensor([[γH]], device=device, dtype=dtype)  # Hz/Gauss
-    dt = tensor([[dt0]], device=device, dtype=dtype)   # Sec
+    γ = γH.to(**dkw)  # Hz/Gauss
+    dt = dt0.to(**dkw)  # Sec
 
+    @staticmethod
     def np(x):
         return x.detach().cpu().numpy()
 
@@ -46,49 +47,46 @@ class Test_mobjs:
         p = mobjs.Pulse(rf=rf, gr=gr, dt=dt, **kw)
 
         # SpinCube (SpinArray is implicitly tested via it)
-        shape = (1, *Nd)
+        shape = (N, *Nd)
+        mask = torch.zeros((1,)+Nd, device=self.device, dtype=torch.bool)
+        mask[0, :, 1, :], mask[0, 1, :, :] = True, True
         fov, ofst = tensor([[3., 3., 3.]], **kw), tensor([[0., 0., 1.]], **kw)
-        T1, T2 = tensor([[1.]], **kw), tensor([[4e-2]], **kw)
-        mask = torch.ones((1,)+Nd, dtype=torch.bool)
-        mask[:, [0, 2, 0, 2], [0, 0, 2, 2], :] = False
+        T1_, T2 = tensor([[1.]], **kw), tensor([[4e-2]], **kw)
 
-        cube = mobjs.SpinCube(shape, fov, T1=T1, γ=γ, **kw)
-        cube.mask = mask
+        cube = mobjs.SpinCube(shape, fov, mask=mask, T1_=T1_, γ_=γ, **kw)
+        cube.ofst = ofst  # separated for test coverage
+
+        cube.M_ = tensor([0., 1., 0.])
         assert(cube.dim() == len(shape))
-        cube.T2 = T2  # Separated for testing `setattr`
+        cube.T2 = T2.expand(cube.shape)  # for test coverage
 
-        cube.M = tensor([[[0., 1., 0.]]], **kw)
-        cube.M[:, [0, 1], [1, 0], :, :] = tensor([1., 0., 0.], **kw)
-        cube.M[:, [2, 1], [1, 2], :, :] = tensor([0., 0., 1.], **kw)
-
-        cube.ofst = ofst
+        M001, M100 = tensor([0., 0., 1.], **kw), tensor([1., 0., 0.], **kw)
+        sl = slice(None)
+        crds_100 = cube.crds_([_slice, [0, 1], [1, 0], _slice, _slice])
+        cube.M_[crds_100] = M100
+        crds_001 = cube.crds_([_slice, [2, 1], [1, 2], _slice, _slice])
+        cube.M_[crds_001] = M001
 
         # gr_x/gr_y == 1 Gauss/cm cancels Δf[1, :, 0]/[1, 0, :] respectively
         loc = cube.loc
 
         cube.Δf = torch.sum(-loc[0:1, :, :, :, 0:2], dim=-1) * γ
 
-        Mres1 = cube.applypulse(p)
-
-        M_mask0 = cube.extract(cube.M, mask=cube.mask.logical_not())
-
-        Mres2 = cube.applypulse_(p, doMask=True)
-
-        Mres_mask0 = cube.extract(cube.M, mask=cube.mask.logical_not())
+        Mres1 = cube.applypulse(p, doEmbed=True)
 
         # assertion
-        Mref = approx(np.array(
+        Mo0 = np.array(
             [[[0.559535641648385,  0.663342640621335, 0.416341441715101],
               [0.391994737048090,  0.210182892388552, -0.860954821972489],
-              [-0.677062008711222, 0.673391604920576, -0.143262993311057]]]),
-            abs=atol)
+              [-0.677062008711222, 0.673391604920576, -0.143262993311057]]])
+        Mref = approx(Mo0, abs=atol)
 
-        assert(Test_mobjs.np(Mres1[0:1, 1, :, 1, :]) == Mref)
-        assert(Test_mobjs.np(Mres1[0:1, :, 1, 1, :]) == Mref)
-        assert(Test_mobjs.np(Mres2[0:1, 1, :, 1, :]) == Mref)
-        assert(Test_mobjs.np(Mres2[0:1, :, 1, 1, :]) == Mref)
-
-        assert(np.array_equal(Test_mobjs.np(Mres_mask0),
-                              Test_mobjs.np(M_mask0)))
+        assert(self.np(Mres1[0:1, 1, :, 1, :]) == Mref)
+        assert(self.np(Mres1[0:1, :, 1, 1, :]) == Mref)
 
         return
+
+
+if __name__ == '__main__':
+    tmp = Test_mobjs()
+    tmp.test_mobjs()
