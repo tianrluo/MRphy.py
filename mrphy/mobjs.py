@@ -1,9 +1,9 @@
 import torch
-from torch import tensor, Tensor
+from torch import tensor, cuda, Tensor
 from typing import TypeVar, Type, Union
 from numbers import Number
 
-from mrphy import γH, dt0, T1G, T2G
+from mrphy import γH, dt0, T1G, T2G, π
 from mrphy import utils, beffective, sims
 
 """
@@ -85,6 +85,17 @@ class Pulse(object):
 
         super().__setattr__(k, v)
         return
+
+    def asdict(self, toNumpy: bool = True) -> dict:
+        tmp = ('rf', 'gr', 'dt')
+        if toNumpy:
+            d = {k: getattr(self, k).detach().cpu().numpy() for k in tmp}
+        else:
+            d = {k: getattr(self, k).detach() for k in tmp}
+
+        d.update({k: getattr(self, k) for k in ('desc', 'device', 'dtype')})
+
+        return d
 
     def beff(
             self, loc: Tensor,
@@ -229,6 +240,17 @@ class SpinArray(object):
         M = self.applypulse(p, loc, doMask=doMask, **kw)
         self.M = (self.embed_(M, self.M) if doMask else M)
         return self.M
+
+    def asdict(self, toNumpy: bool = True) -> dict:
+        tmp = ('mask', 'T1', 'T2', 'γ', 'M')
+        if toNumpy:
+            d = {k: getattr(self, k).detach().cpu().numpy() for k in tmp}
+        else:
+            d = {k: getattr(self, k).detach() for k in tmp}
+
+        d.update({k: getattr(self, k) for k in ('shape', 'device', 'dtype')})
+
+        return d
 
     def dim(self) -> int: return len(self.shape)
 
@@ -394,6 +416,16 @@ class SpinCube(object):
         return self.spinarray.applypulse_(p, self.loc, doMask=doMask,
                                           Δf=self.Δf, b1Map=b1Map)
 
+    def asdict(self, toNumpy: bool = True) -> dict:
+        tmp = ('Δf', 'fov', 'ofst')
+        if toNumpy:
+            d = {k: getattr(self, k).detach().cpu().numpy() for k in tmp}
+        else:
+            d = {k: getattr(self, k).detach() for k in tmp}
+
+        d.update(self.spinarray.asdict(toNumpy=toNumpy))
+        return d
+
     def dim(self) -> int: return self.spinarray.ndim
 
     def embed(self, v: Tensor, mask: Tensor = None) -> Tensor:
@@ -437,3 +469,29 @@ class SpinBolus(SpinArray):
             self):
         pass
     pass
+
+
+class Examples(object):
+    """
+    Just a class quickly creating exemplary instances to play around with.
+    """
+    @staticmethod
+    def pulse() -> Pulse:
+        device = torch.device('cuda' if cuda.is_available() else 'cpu')
+        dtype = torch.float32
+
+        kw = {'dtype': dtype, 'device': device}
+        N, nT, dt = 1, 512, dt0
+
+        # pulse: Sec; Gauss; Gauss/cm.
+        pulse_size = (N, 1, nT)
+        t = torch.arange(0, nT, **kw).reshape(pulse_size)
+        rf = 10*torch.cat([torch.cos(t/nT*2*π),                # (1,xy, nT)
+                           torch.sin(t/nT*2*π)], 1)
+        gr = torch.cat([torch.ones(pulse_size, **kw),
+                        torch.ones(pulse_size, **kw),
+                        10*torch.atan(t - round(nT/2))/π], 1)  # (1,xyz,nT)
+
+        # Pulse
+        print('Pulse(rf=rf, gr=gr, dt=gt, device=device, dtype=dtype)')
+        return Pulse(rf=rf, gr=gr, dt=dt, **kw)
