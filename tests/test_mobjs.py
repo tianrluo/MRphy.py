@@ -46,10 +46,10 @@ class Test_mobjs:
         p = mobjs.Pulse(rf=rf, gr=gr, dt=dt, **kw)
 
         # SpinCube (SpinArray is implicitly tested via it)
-        shape = (1, *Nd)
+        shape = (N, *Nd)
         fov, ofst = tensor([[3., 3., 3.]], **kw), tensor([[0., 0., 1.]], **kw)
         T1, T2 = tensor([[1.]], **kw), tensor([[4e-2]], **kw)
-        mask = torch.ones((1,)+Nd, dtype=torch.bool)
+        mask = torch.ones(shape, dtype=torch.bool)
         mask[:, [0, 2, 0, 2], [0, 0, 2, 2], :] = False
 
         cube = mobjs.SpinCube(shape, fov, T1=T1, γ=γ, **kw)
@@ -68,7 +68,7 @@ class Test_mobjs:
 
         cube.Δf = torch.sum(-loc[0:1, :, :, :, 0:2], dim=-1) * γ
 
-        Mres1 = cube.applypulse(p)
+        Mres1 = cube.applypulse(p, doMask=False)
 
         M_mask0 = cube.extract(cube.M, mask=cube.mask.logical_not())
 

@@ -205,15 +205,16 @@ class SpinArray(object):
         return
 
     def applypulse(
-            self, p: Pulse, loc: Tensor, doMask: bool = False,
+            self, p: Pulse, loc: Tensor, doMask: bool = True,
             **kw) -> Tensor:
         """
         *INPUTS*:
         - `p`   (1,) mobjs.Pulse object
         - `loc` (N,*Nd,xyz) "cm", locations.
         *OPTIONALS*:
-        - `Δf`
-        - `b1Map`
+        - `doMask` [t/F], if `True`, return masked `beff`.
+        - `Δf`    (N,*Nd,) "Hz", off-resonance.
+        - `b1Map` (N,*Nd,xy,(nCoils)) a.u., , transmit sensitivity.
         """
         dkw = {'device': self.device, 'dtype': self.dtype}
         p, loc = p.to(**dkw), loc.to(**dkw)
@@ -232,7 +233,7 @@ class SpinArray(object):
         return sims.blochsim(M, beff, **kw_bsim)
 
     def applypulse_(
-            self, p: Pulse, loc: Tensor, doMask: bool = False,
+            self, p: Pulse, loc: Tensor, doMask: bool = True,
             **kw) -> Tensor:
         """
         This function does not save allocations but only updates the self.M
@@ -396,19 +397,20 @@ class SpinCube(object):
         return
 
     def applypulse(
-            self, p: Pulse, doMask: bool = False,
+            self, p: Pulse, doMask: bool = True,
             b1Map: Tensor = None) -> Tensor:
         """
         *INPUTS*:
         - `p`   (1,) mobjs.Pulse object
         *OPTIONALS*
-        - `b1Map`
+        - `doMask` [t/F], if `True`, return masked `beff`.
+        - `b1Map` (N,*Nd,xy,(nCoils)) a.u., , transmit sensitivity.
         """
         return self.spinarray.applypulse(p, self.loc, doMask=doMask,
                                          Δf=self.Δf, b1Map=b1Map)
 
     def applypulse_(
-            self, p: Pulse, doMask: bool = False,
+            self, p: Pulse, doMask: bool = True,
             b1Map: Tensor = None) -> Tensor:
         """
         This function does not save allocations but only updates the self.M
@@ -495,3 +497,21 @@ class Examples(object):
         # Pulse
         print('Pulse(rf=rf, gr=gr, dt=gt, device=device, dtype=dtype)')
         return Pulse(rf=rf, gr=gr, dt=dt, **kw)
+
+    @staticmethod
+    def spincube() -> SpinCube:
+        device = torch.device('cuda' if cuda.is_available() else 'cpu')
+        dtype = torch.float32
+        kw = {'dtype': dtype, 'device': device}
+
+        N, Nd, γ = 1, (3, 3, 3), γH
+        shape = (N, *Nd)
+        fov, ofst = tensor([[3., 3., 3.]], **kw), tensor([[0., 0., 1.]], **kw)
+        T1, T2 = tensor([[1.]], **kw), tensor([[4e-2]], **kw)
+
+        mask = torch.ones(shape, dtype=torch.bool)
+        cube = SpinCube(shape, fov, ofst=ofst, T1=T1, T2=T2, γ=γ, mask=mask,
+                        **kw)
+
+        cube.Δf = torch.sum(-cube.loc[0:1, :, :, :, 0:2], dim=-1) * γ
+        return cube
