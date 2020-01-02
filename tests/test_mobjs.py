@@ -92,3 +92,8 @@ class Test_mobjs:
                               Test_mobjs.np(M_mask0)))
 
         return
+
+
+if __name__ == '__main__':
+    tmp = Test_mobjs()
+    tmp.test_mobjs()

@@ -131,6 +131,7 @@ class SpinArray(object):
     *INPUTS*:
     - `shape` tuple( (N, nx, (ny, (nz,...))) ).
     *OPTIONALS*:
+    - `mask` (self.shape) bool, mask for spins of interest.
     - `T1` (self.shape) "Sec", T1 relaxation coeff.
     - `T2` (self.shape) "Sec", T2 relaxation coeff.
     - `γ`  (self.shape) "Hz/Gauss", gyro ratio.
@@ -313,15 +314,16 @@ class SpinCube(object):
     """
         SpinCube(shape, fov; ofst, Δf, T1, T2, γ, M, device, dtype)
     *INPUTS*:
-    - `shape` tuple( (N, nx, (ny, (nz,...))) ).
-    - `fov` (N, xyz,) "cm", field of view.
+    - `shape` Tuple `(N, nx, (ny, (nz,...)))`.
+    - `fov` (N, xyz,) Tensor "cm", field of view.
     *OPTIONALS*:
-    - `ofst` (N, xyz,) "cm", fov offset from iso-center.
-    - `Δf` (self.shape) "Hz", off-resonance map.
-    - `T1` (self.shape) "Sec", T1 relaxation coeff.
-    - `T2` (self.shape) "Sec", T2 relaxation coeff.
-    - `γ`  (self.shape) "Hz/Gauss", gyro ratio.
-    - `M`  (self.shape)+(xyz,), spins, assumed equilibrium [0 0 1]
+    - `mask` (self.shape) bool, mask for spins of interest.
+    - `ofst` (N, xyz,) Tensor "cm", fov offset from iso-center.
+    - `Δf` (self.shape) Tensor "Hz", off-resonance map.
+    - `T1` (self.shape) Tensor "Sec", T1 relaxation coeff.
+    - `T2` (self.shape) Tensor "Sec", T2 relaxation coeff.
+    - `γ`  (self.shape) Tensor "Hz/Gauss", gyro ratio.
+    - `M`  (self.shape)+(xyz,) Tensor, spins, assumed equilibrium [0 0 1]
     - `device` torch.device; `dtype` torch.dtype
     """
 
