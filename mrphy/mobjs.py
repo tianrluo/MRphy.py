@@ -231,7 +231,10 @@ class SpinArray(object):
 
         kw_bsim['dt'] = p.dt
 
-        return sims.blochsim(M, beff, **kw_bsim)
+        M = sims.blochsim(M, beff, **kw_bsim)
+        M = self.embed(M) if doMask else M
+
+        return M
 
     def applypulse_(
             self, p: Pulse, loc: Tensor, doMask: bool = True,
@@ -240,7 +243,10 @@ class SpinArray(object):
         This function does not save allocations but only updates the self.M
         """
         M = self.applypulse(p, loc, doMask=doMask, **kw)
-        self.M = (self.embed_(M, self.M) if doMask else M)
+        if doMask:
+            self.M[self.mask] = M[self.mask]
+        else:
+            self.M = M
         return self.M
 
     def asdict(self, toNumpy: bool = True) -> dict:
