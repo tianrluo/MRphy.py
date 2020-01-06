@@ -49,11 +49,8 @@ class Test_mobjs:
         shape = (N, *Nd)
         fov, ofst = tensor([[3., 3., 3.]], **kw), tensor([[0., 0., 1.]], **kw)
         T1, T2 = tensor([[1.]], **kw), tensor([[4e-2]], **kw)
-        mask = torch.ones(shape, dtype=torch.bool)
-        mask[:, [0, 2, 0, 2], [0, 0, 2, 2], :] = False
 
         cube = mobjs.SpinCube(shape, fov, T1=T1, γ=γ, **kw)
-        cube.mask = mask
         assert(cube.dim() == len(shape))
         cube.T2 = T2  # Separated for testing `setattr`
 
@@ -68,13 +65,7 @@ class Test_mobjs:
 
         cube.Δf = torch.sum(-loc[0:1, :, :, :, 0:2], dim=-1) * γ
 
-        Mres1 = cube.applypulse(p, doMask=False)
-
-        M_mask0 = cube.extract(cube.M, mask=cube.mask.logical_not())
-
-        Mres2 = cube.applypulse_(p, doMask=True)
-
-        Mres_mask0 = cube.extract(cube.M, mask=cube.mask.logical_not())
+        Mres1 = cube.applypulse(p)
 
         # assertion
         Mref = approx(np.array(
@@ -85,11 +76,6 @@ class Test_mobjs:
 
         assert(Test_mobjs.np(Mres1[0:1, 1, :, 1, :]) == Mref)
         assert(Test_mobjs.np(Mres1[0:1, :, 1, 1, :]) == Mref)
-        assert(Test_mobjs.np(Mres2[0:1, 1, :, 1, :]) == Mref)
-        assert(Test_mobjs.np(Mres2[0:1, :, 1, 1, :]) == Mref)
-
-        assert(np.array_equal(Test_mobjs.np(Mres_mask0),
-                              Test_mobjs.np(M_mask0)))
 
         return
 

@@ -27,7 +27,8 @@ class Pulse(object):
     - `desc` str, an description of the pulse to be constructed.
     """
 
-    __slots__ = ('rf', 'gr', 'dt', 'desc', 'device', 'dtype')
+    _immutable = ('device', 'dtype')
+    __slots__ = _immutable + ('rf', 'gr', 'dt', 'desc')
 
     def __init__(
             self,
@@ -68,7 +69,7 @@ class Pulse(object):
         return
 
     def __setattr__(self, k, v):
-        assert (k not in ('device', 'dtype')), "'%s' not writable" % k
+        assert (k not in self._immutable), "'%s' not writable" % k
 
         if k in ('rf', 'gr', 'dt'):
             if k == 'dt' and isinstance(v, Number):
@@ -88,11 +89,10 @@ class Pulse(object):
 
     def asdict(self, toNumpy: bool = True) -> dict:
         tmp = ('rf', 'gr', 'dt')
-        if toNumpy:
-            d = {k: getattr(self, k).detach().cpu().numpy() for k in tmp}
-        else:
-            d = {k: getattr(self, k).detach() for k in tmp}
+        fn_np = (lambda x: x.detach().cpu().numpy() if toNumpy else
+                 lambda x: x.detach())
 
+        d = {k: fn_np(getattr(self, k)) for k in tmp}
         d.update({k: getattr(self, k) for k in ('desc', 'device', 'dtype')})
 
         return d
@@ -127,11 +127,10 @@ class Pulse(object):
 
 class SpinArray(object):
     """
-        SpinArray(shape; mask, T1, T2, γ, M, device, dtype)
+        SpinArray(shape; T1, T2, γ, M, device, dtype)
     *INPUTS*:
     - `shape` tuple( (N, nx, (ny, (nz,...))) ).
     *OPTIONALS*:
-    - `mask` (self.shape) bool, mask for spins of interest.
     - `T1` (self.shape) "Sec", T1 relaxation coeff.
     - `T2` (self.shape) "Sec", T2 relaxation coeff.
     - `γ`  (self.shape) "Hz/Gauss", gyro ratio.
@@ -139,15 +138,15 @@ class SpinArray(object):
     - `device` torch.device; `dtype` torch.dtype
     """
 
-    __slots__ = ('shape', 'mask', 'device', 'dtype', 'T1', 'T2', 'γ', 'M')
+    _immutable = ('shape', 'device', 'dtype', 'ndim')
+    __slots__ = _immutable + ('T1', 'T2', 'γ', 'M')
 
     def __init__(
             self, shape: tuple,
-            mask: Tensor = None,
+            M: Tensor = None,
             T1: Type[Union[Tensor, Number]] = T1G,
             T2: Type[Union[Tensor, Number]] = T2G,
             γ: Type[Union[Tensor, Number]] = γH,
-            M: Tensor = None,
             device: torch.device = torch.device('cpu'),
             dtype: torch.dtype = torch.float32):
 
@@ -155,32 +154,24 @@ class SpinArray(object):
                isinstance(dtype, torch.dtype))
 
         super().__setattr__('shape', shape)
+        super().__setattr__('ndim', len(shape))
         super().__setattr__('device', device)
         super().__setattr__('dtype', dtype)
 
         dkw = {'device': self.device, 'dtype': self.dtype}
 
         # Defaults
-        self.mask = (torch.ones((1, *shape[1:]),
-                                dtype=torch.bool, device=device)
-                     if (mask is None) else mask)
-        self.T1 = T1G if (T1 is None) else T1
-        self.T2 = T2G if (T2 is None) else T2
-        self.γ = γH if (γ is None) else γ
+        self.T1, self.T2, self.γ = T1, T2, γ
         self.M = tensor([[[0., 0., 1.]]], **dkw) if (M is None) else M
 
         return
-
-    @property
-    def ndim(self):
-        return len(self.shape)
 
     def __getattr__(self, k):
         raise AttributeError("'SpinArray' object has no attribute '%s'" % k)
         return
 
     def __setattr__(self, k, v):
-        assert (k not in ('shape', 'device', 'dtype')), "'%s' not writable" % k
+        assert (k not in self._immutable), "'%s' not writable" % k
 
         if not isinstance(v, Tensor):
             v = tensor(v, device=self.device)
@@ -197,98 +188,52 @@ class SpinArray(object):
                 v = v.reshape(vs[0:1]+(d-1)*(1,)+(3,)).expand(s+(3,)).clone()
             elif k in ('T1', 'T2', 'γ'):  # -> self.shape
                 v = v.reshape(vs + (d-v.ndim)*(1,)).expand(s)
-        elif k in ('mask'):
-            assert(v.dtype == torch.bool)
-            assert(vs == (1, *s[1:])), "new %s.shape is incompatible." % k
 
         super().__setattr__(k, v)
 
         return
 
-    def applypulse(
-            self, p: Pulse, loc: Tensor, doMask: bool = True,
-            **kw) -> Tensor:
+    def applypulse(self, p: Pulse, loc: Tensor, **kw) -> Tensor:
         """
         *INPUTS*:
         - `p`   (1,) mobjs.Pulse object
         - `loc` (N,*Nd,xyz) "cm", locations.
         *OPTIONALS*:
-        - `doMask` [t/F], if `True`, return masked `beff`.
         - `Δf`    (N,*Nd,) "Hz", off-resonance.
         - `b1Map` (N,*Nd,xy,(nCoils)) a.u., , transmit sensitivity.
         """
         dkw = {'device': self.device, 'dtype': self.dtype}
         p, loc = p.to(**dkw), loc.to(**dkw)
-        beff = self.pulse2beff(p, loc, doMask=doMask, **kw)
+        beff = self.pulse2beff(p, loc, **kw)
 
         ks = ('T1', 'T2', 'γ')
-        if doMask:
-            kw_bsim = {k: self.extract(getattr(self, k)) for k in ks}
-            M = self.extract(self.M)
-        else:
-            kw_bsim = {k: getattr(self, k) for k in ks}
-            M = self.M
+        kw_bsim = {k: getattr(self, k) for k in ks}
+        M = self.M
 
         kw_bsim['dt'] = p.dt
 
         M = sims.blochsim(M, beff, **kw_bsim)
-        M = self.embed(M) if doMask else M
 
         return M
 
-    def applypulse_(
-            self, p: Pulse, loc: Tensor, doMask: bool = True,
-            **kw) -> Tensor:
-        """
-        This function does not save allocations but only updates the self.M
-        """
-        M = self.applypulse(p, loc, doMask=doMask, **kw)
-        if doMask:
-            self.M[self.mask] = M[self.mask]
-        else:
-            self.M = M
-        return self.M
-
     def asdict(self, toNumpy: bool = True) -> dict:
-        tmp = ('mask', 'T1', 'T2', 'γ', 'M')
-        if toNumpy:
-            d = {k: getattr(self, k).detach().cpu().numpy() for k in tmp}
-        else:
-            d = {k: getattr(self, k).detach() for k in tmp}
+        tmp = ('T1', 'T2', 'γ', 'M')
+        fn_np = (lambda x: x.detach().cpu().numpy() if toNumpy else
+                 lambda x: x.detach())
 
+        d = {k: fn_np(getattr(self, k)) for k in tmp}
         d.update({k: getattr(self, k) for k in ('shape', 'device', 'dtype')})
-
         return d
 
     def dim(self) -> int: return len(self.shape)
 
-    def embed(self, v: Tensor, mask: Tensor = None) -> Tensor:
-        """
-        *INPUTS*:
-        - `v` (N, nM, ...)
-        """
-        t = v.new_zeros(self.shape+v.shape[2:])
-        t = self.embed_(v, t, mask=mask)
-        return t
-
-    def embed_(self, v: Tensor, t: Tensor, mask: Tensor = None) -> Tensor:
-        mask = (mask if mask is not None else self.mask).expand(self.shape)
-        t[mask] = v
-        return t
-
-    def extract(self, v: Tensor, mask: Tensor = None) -> Tensor:
-        N, ndim = self.shape[0], self.ndim
-        mask = (mask if mask is not None else self.mask).expand(self.shape)
-        return v[mask].reshape((N, -1,)+v.shape[ndim:])
-
     def pulse2beff(
-            self, p: Pulse, loc: Tensor, doMask: bool = False,
+            self, p: Pulse, loc: Tensor,
             Δf: Tensor = None, b1Map: Tensor = None) -> Tensor:
         """
         *INPUTS*:
         - `loc`   (N,*Nd,xyz) "cm", locations.
         *OPTIONALS*:
-        - `doMask` [t/F], if `True`, return masked `beff`.
         - `Δf`    (N,*Nd,) "Hz", off-resonance.
         - `b1Map` (N,*Nd,xy,(nCoils)) a.u., , transmit sensitivity.
         *OUTPUTS*:
@@ -297,9 +242,6 @@ class SpinArray(object):
         dkw = {'device': self.device, 'dtype': self.dtype}
         p, loc = p.to(**dkw), loc.to(**dkw)
         γ = self.γ
-        if doMask:
-            loc, γ, Δf = (self.extract(x) for x in (loc, γ, Δf))
-            b1Map = (self.extract(b1Map) if b1Map else b1Map)
 
         return p.beff(loc, γ=γ, Δf=Δf, b1Map=b1Map)
 
@@ -308,9 +250,8 @@ class SpinArray(object):
     def to(self, device: torch.device = torch.device('cpu'),
            dtype: torch.dtype = torch.float32) -> SpinArray:
         if (self.device != device) or (self.dtype != dtype):
-            return SpinArray(self.shape, mask=self.mask,
-                             T1=self.T1, T2=self.T2, γ=self.γ, M=self.M,
-                             device=device, dtype=dtype)
+            return SpinArray(self.shape, T1=self.T1, T2=self.T2, γ=self.γ,
+                             M=self.M, device=device, dtype=dtype)
         else:
             return self
         return
@@ -323,7 +264,6 @@ class SpinCube(object):
     - `shape` Tuple `(N, nx, (ny, (nz,...)))`.
     - `fov` (N, xyz,) Tensor "cm", field of view.
     *OPTIONALS*:
-    - `mask` (self.shape) bool, mask for spins of interest.
     - `ofst` (N, xyz,) Tensor "cm", fov offset from iso-center.
     - `Δf` (self.shape) Tensor "Hz", off-resonance map.
     - `T1` (self.shape) Tensor "Sec", T1 relaxation coeff.
@@ -334,14 +274,12 @@ class SpinCube(object):
     """
 
     # SpinArray.__slots__ = ('shape', 'device', 'dtype', 'T1', 'T2', 'γ', 'M')
-    __slots__ = ('spinarray', 'Δf', 'fov', 'ofst')
+    _immutable = ('spinarray',)
+    __slots__ = _immutable+('Δf', 'fov', 'ofst')
 
     def __init__(
-            self, shape: tuple,
-            fov: Tensor,
-            ofst: Tensor = None,
-            mask: Tensor = None,
-            Δf: Tensor = None, M=None,
+            self, shape: tuple, fov: Tensor,
+            ofst: Tensor = None, Δf: Tensor = None, M: Tensor = None,
             T1: Type[Union[Tensor, Number]] = T1G,
             T2: Type[Union[Tensor, Number]] = T2G,
             γ: Type[Union[Tensor, Number]] = γH,
@@ -350,7 +288,7 @@ class SpinCube(object):
         """
         """
         super().__setattr__('spinarray',
-                            SpinArray(shape, mask=mask, T1=T1, T2=T2, γ=γ, M=M,
+                            SpinArray(shape, T1=T1, T2=T2, γ=γ, M=M,
                                       device=device, dtype=dtype))
 
         dkw = {'device': self.spinarray.device, 'dtype': self.spinarray.dtype}
@@ -383,7 +321,7 @@ class SpinCube(object):
         return getattr(self.spinarray, k)
 
     def __setattr__(self, k, v):
-        assert (k not in ('spinarray')), "'%s' not writable" % k
+        assert (k not in self._immutable), "'%s' not writable" % k
 
         if k in SpinArray.__slots__:
             setattr(self.spinarray, k, v)
@@ -404,52 +342,27 @@ class SpinCube(object):
 
         return
 
-    def applypulse(
-            self, p: Pulse, doMask: bool = True,
-            b1Map: Tensor = None) -> Tensor:
+    def applypulse(self, p: Pulse, b1Map: Tensor = None) -> Tensor:
         """
         *INPUTS*:
         - `p`   (1,) mobjs.Pulse object
         *OPTIONALS*
-        - `doMask` [t/F], if `True`, return masked `beff`.
         - `b1Map` (N,*Nd,xy,(nCoils)) a.u., , transmit sensitivity.
         """
-        return self.spinarray.applypulse(p, self.loc, doMask=doMask,
-                                         Δf=self.Δf, b1Map=b1Map)
-
-    def applypulse_(
-            self, p: Pulse, doMask: bool = True,
-            b1Map: Tensor = None) -> Tensor:
-        """
-        This function does not save allocations but only updates the self.M
-        """
-        return self.spinarray.applypulse_(p, self.loc, doMask=doMask,
-                                          Δf=self.Δf, b1Map=b1Map)
+        return self.spinarray.applypulse(p, self.loc, Δf=self.Δf, b1Map=b1Map)
 
     def asdict(self, toNumpy: bool = True) -> dict:
         tmp = ('Δf', 'fov', 'ofst')
-        if toNumpy:
-            d = {k: getattr(self, k).detach().cpu().numpy() for k in tmp}
-        else:
-            d = {k: getattr(self, k).detach() for k in tmp}
+        fn_np = (lambda x: x.detach().cpu().numpy() if toNumpy else
+                 lambda x: x.detach())
 
+        d = {k: fn_np(getattr(self, k)) for k in tmp}
         d.update(self.spinarray.asdict(toNumpy=toNumpy))
         return d
 
     def dim(self) -> int: return self.spinarray.ndim
 
-    def embed(self, v: Tensor, mask: Tensor = None) -> Tensor:
-        return self.spinarray.embed(v, mask=mask)
-
-    def embed_(self, v: Tensor, t: Tensor, mask: Tensor = None) -> Tensor:
-        return self.spinarray.embed_(v, t, mask=mask)
-
-    def extract(self, v: Tensor, mask: Tensor = None) -> Tensor:
-        return self.spinarray.extract(v, mask=mask)
-
-    def pulse2beff(
-            self, p: Pulse, doMask: bool = False,
-            b1Map: Tensor = None) -> Tensor:
+    def pulse2beff(self, p: Pulse, b1Map: Tensor = None) -> Tensor:
         """
         *INPUTS*:
         - `p` (1,) Pulse object
@@ -458,17 +371,16 @@ class SpinCube(object):
         *OUTPUTS*:
         - `beff`  (N,*Nd,xyz,nT)
         """
-        return self.spinarray.pulse2beff(p, self.loc, doMask=doMask,
-                                         Δf=self.Δf, b1Map=b1Map)
+        return self.spinarray.pulse2beff(p, self.loc, Δf=self.Δf, b1Map=b1Map)
 
     def size(self) -> tuple: return self.spinarray.shape
 
     def to(self, device: torch.device = torch.device('cpu'),
            dtype: torch.dtype = torch.float32) -> SpinCube:
         if (self.device != device) or (self.dtype != dtype):
-            return SpinCube(self.shape, self.fov, ofst=self.ofst,
-                            mask=self.mask, Δf=self.Δf, T1=self.T1, T2=self.T2,
-                            γ=self.γ, M=self.M, device=device, dtype=dtype)
+            return SpinCube(self.shape, self.fov, ofst=self.ofst, Δf=self.Δf,
+                            T1=self.T1, T2=self.T2, γ=self.γ, M=self.M,
+                            device=device, dtype=dtype)
         else:
             return self
         return
@@ -517,9 +429,7 @@ class Examples(object):
         fov, ofst = tensor([[3., 3., 3.]], **kw), tensor([[0., 0., 1.]], **kw)
         T1, T2 = tensor([[1.]], **kw), tensor([[4e-2]], **kw)
 
-        mask = torch.ones(shape, dtype=torch.bool)
-        cube = SpinCube(shape, fov, ofst=ofst, T1=T1, T2=T2, γ=γ, mask=mask,
-                        **kw)
+        cube = SpinCube(shape, fov, ofst=ofst, T1=T1, T2=T2, γ=γ, **kw)
 
         cube.Δf = torch.sum(-cube.loc[0:1, :, :, :, 0:2], dim=-1) * γ
         return cube
