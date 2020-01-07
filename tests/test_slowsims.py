@@ -17,8 +17,12 @@ class Test_slowsims:
 
     dkw = {'dtype': dtype, 'device': device}
 
-    γ = tensor([[γH]], device=device, dtype=dtype)  # Hz/Gauss
-    dt = tensor([[dt0]], device=device, dtype=dtype)   # Sec
+    γ = γH.to(**dkw)  # Hz/Gauss
+    dt = dt0.to(**dkw)  # Sec
+
+    @staticmethod
+    def np(x):
+        return x.detach().cpu().numpy()
 
     def test_blochsims(self):
 
@@ -70,25 +74,24 @@ class Test_slowsims:
         Mo3 = slowsims.blochsim_ab(M0, A, B)
 
         # assertion
-        fn_np = lambda x: x.detach().cpu().numpy()  # noqa: E731
         Mo0 = np.array(
             [[[0.559535641648385,  0.663342640621335, 0.416341441715101],
               [0.391994737048090,  0.210182892388552, -0.860954821972489],
               [-0.677062008711222, 0.673391604920576, -0.143262993311057]]])
         ref = approx(Mo0, abs=atol)
 
-        f1, f2, f3 = (fn_np(x) == ref for x in (Mo1, Mo2, Mo3))
+        f1, f2, f3 = (self.np(x) == ref for x in (Mo1, Mo2, Mo3))
         assert(f1 and f2 and f3)
 
         # Verify gradients can chain rule back to `rf` and `gr`
         foo = torch.sum(Mo1)
         foo.backward(retain_graph=True)  # keep graph to check `bar.backward()`
-        rf_grad1, gr_grad1 = fn_np(rf.grad), fn_np(gr.grad)
+        rf_grad1, gr_grad1 = self.np(rf.grad), self.np(gr.grad)
         rf.grad = gr.grad = None  # clear grads from `foo`
 
         bar = torch.sum(Mo3)
         bar.backward()
-        rf_grad2, gr_grad2 = fn_np(rf.grad), fn_np(gr.grad)
+        rf_grad2, gr_grad2 = self.np(rf.grad), self.np(gr.grad)
         assert(rf_grad1 == approx(rf_grad2, abs=atol))
         assert(gr_grad1 == approx(gr_grad2, abs=atol))
 

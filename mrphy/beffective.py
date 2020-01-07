@@ -11,8 +11,7 @@ from mrphy import utils
 
 def rfgr2beff(
         rf: Tensor, gr: Tensor, loc: Tensor,
-        Δf: Tensor = None, b1Map: Tensor = None,
-        γ: Tensor = None):
+        Δf: Tensor = None, b1Map: Tensor = None, γ: Tensor = γH):
     """
         beff = rfgr2beff(rf, gr, loc, Δf, b1Map, γ)
     *INPUTS*:
@@ -35,8 +34,7 @@ def rfgr2beff(
     Bz = (loc.reshape(N, -1, 3) @ gr).reshape((N, *Nd, 1, -1))
 
     if Δf is not None:  # Δf: -> (N, *Nd, 1, 1); 3 from 1(dim-N) + 2(dim-xtra)
-        γ = (tensor([[γH]], device=device, dtype=Δf.dtype)
-             if (γ is None) else γ.to(device))
+        γ = γ.to(device=device)
         Δf, γ = map(lambda x: x.reshape(x.shape+(d+3-x.dim())*(1,)), (Δf, γ))
         Bz += Δf/γ
 
