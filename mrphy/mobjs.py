@@ -1,8 +1,7 @@
 import numpy as np
 import torch
-from torch import tensor, cuda, Tensor
-from typing import TypeVar, Type, Union
-from numbers import Number
+from torch import tensor, Tensor
+from typing import TypeVar
 
 from mrphy import γH, dt0, T1G, T2G, π
 from mrphy import utils, beffective, sims
@@ -507,12 +506,11 @@ class SpinCube(object):
         *OUTPUTS*:
         - `beff`  | `beff_`  (N,*Nd|nM,xyz,nT)
         """
-        sp = self.spinarray
         assert ((b1Map_ is None) or (b1Map is None))
         b1Map_ = (b1Map_ if b1Map is None else self.extract(b1Map))
 
         return self.spinarray.applypulse(pulse, doEmbed=doEmbed, Δf_=self.Δf_,
-                                          loc_=self.loc_, b1Map_=b1Map_)
+                                         loc_=self.loc_, b1Map_=b1Map_)
 
     def asdict(self, toNumpy: bool = True, doEmbed: bool = True) -> dict:
         fn_np = (lambda x: x.detach().cpu().numpy() if toNumpy else

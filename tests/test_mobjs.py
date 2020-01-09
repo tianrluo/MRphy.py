@@ -61,7 +61,6 @@ class Test_mobjs:
         cube.T2 = T2.expand(cube.shape)  # for test coverage
 
         M001, M100 = tensor([0., 0., 1.], **kw), tensor([1., 0., 0.], **kw)
-        sl = slice(None)
         crds_100 = cube.crds_([_slice, [0, 1], [1, 0], _slice, _slice])
         cube.M_[crds_100] = M100
         crds_001 = cube.crds_([_slice, [2, 1], [1, 2], _slice, _slice])
