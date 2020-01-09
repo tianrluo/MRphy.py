@@ -1,11 +1,16 @@
 from typing import Tuple
 
 import torch
-from torch import tensor, Tensor
+from torch import Tensor
 from torch.autograd import Function
 from torch.autograd.function import _ContextMethodMixin as CTX
 
-from mrphy import γH, dt0, π, inf
+from mrphy import T1G, T2G, γH, dt0, π
+
+
+# TODO:
+# - Avoid cache when needs_input_grad is False
+# - Create `BlochSim_rfgr` that directly computes grads w.r.t. `rf` and `gr`.
 
 
 class BlochSim(Function):
@@ -26,7 +31,6 @@ class BlochSim(Function):
         u = γBeff.new_empty(NNd+(3, 1))
         ϕ, cϕ, sϕ = (γBeff.new_empty(NNd+(1, 1)) for _ in range(3))
 
-        # TODO: avoid cache when needs_input_grad is False
         # %% Other variables to be cached
         m0, Mhst = Mi[..., None], γBeff.new_empty(NNd+(3, nT))
 
@@ -144,8 +148,8 @@ class BlochSim(Function):
 
 def blochsim(
         Mi: Tensor, Beff: Tensor,
-        T1: Tensor = None, T2: Tensor = None,
-        γ: Tensor = None, dt: Tensor = None) -> Tensor:
+        T1: Tensor = T1G, T2: Tensor = T2G,
+        γ: Tensor = γH, dt: Tensor = dt0) -> Tensor:
     """
     *INPUTS*:
     - `Mi` (N, *Nd, xyz), Magnetic spins, assumed equilibrium [0 0 1]
@@ -164,15 +168,8 @@ def blochsim(
 
     # %% Defaults and move to the same device
     assert(Mi.shape[:-1] == Beff.shape[:-2])
-    d = Beff.dim()
-    device, dtype = Mi.device, Mi.dtype
-    Beff = Beff.to(device)
-    dkw = {'device': device, 'dtype': dtype}
-    dt = tensor(dt0, **dkw) if (dt0 is None) else dt.to(device)
-    γ = tensor(γH, **dkw) if (γ is None) else γ.to(device)
-    T1 = tensor(inf, **dkw) if (T1 is None) else T1.to(device)
-    T2 = tensor(inf, **dkw) if (T2 is None) else T2.to(device)
-    T1, T2, γ, dt = (x.reshape(x.shape+(d-x.dim())*(1,))
+    Beff = Beff.to(Mi.device)
+    T1, T2, γ, dt = (x.reshape(x.shape+(Beff.dim()-x.dim())*(1,))
                      for x in (T1, T2, γ, dt))  # (N, *Nd, :, :) compatible
 
     return BlochSim.apply(Mi, Beff, T1, T2, γ, dt)

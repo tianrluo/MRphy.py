@@ -1,8 +1,7 @@
 import numpy as np
 import torch
-from torch import tensor, cuda, Tensor
-from typing import TypeVar, Type, Union
-from numbers import Number
+from torch import tensor, Tensor
+from typing import TypeVar
 
 from mrphy import γH, dt0, T1G, T2G, π
 from mrphy import utils, beffective, sims
@@ -177,8 +176,10 @@ class SpinArray(object):
 
     def __init__(
             self, shape: tuple, mask: Tensor = None,
-            T1_: Tensor = T1G, T2_: Tensor = T2G,
-            γ_: Tensor = γH, M_: Tensor = tensor([0., 0., 1.]),
+            T1: Tensor = None, T1_: Tensor = None,
+            T2: Tensor = None, T2_: Tensor = None,
+            γ: Tensor = None,  γ_: Tensor = None,
+            M: Tensor = None,  M_: Tensor = None,
             device: torch.device = torch.device('cpu'),
             dtype: torch.dtype = torch.float32):
 
@@ -197,7 +198,30 @@ class SpinArray(object):
         super().__setattr__('device', device)
         super().__setattr__('dtype', dtype)
 
-        self.T1_, self.T2_, self.γ_, self.M_ = T1_, T2_, γ_, M_
+        assert((T1 is None) or (T1_ is None))
+        if T1 is None:
+            self.T1_ = (T1G if T1_ is None else T1_)
+        else:
+            self.T1 = T1
+
+        assert((T2 is None) or (T2_ is None))
+        if T2 is None:
+            self.T2_ = (T2G if T2_ is None else T2_)
+        else:
+            self.T2 = T2
+
+        assert((γ is None) or (γ_ is None))
+        if γ is None:
+            self.γ_ = (γH if γ_ is None else γ_)
+        else:
+            self.γ = γ
+
+        assert((M is None) or (M_ is None))
+        if M is None:
+            self.M_ = (tensor([0., 0., 1.]) if M_ is None else M_)
+        else:
+            self.M = M
+
         return
 
     def __getattr__(self, k):
@@ -215,15 +239,16 @@ class SpinArray(object):
         kw = {'device': self.device, 'dtype': self.dtype}
         v_ = (v_.to(**kw) if isinstance(v_, Tensor) else tensor(v_, **kw))
 
+        shape = self.shape
         if k_+'_' in self._compact:  # enable non-compact assignment
-            assert (v_.shape[:self.ndim] == self.shape)
-            k_, v_ = k_+'_', self.extract(v_)
+            k_ = k_+'_'
             assert (k_ not in self._readonly), "'%s' is read-only." % k_
+            v_ = self.extract(v_.expand(shape+(3,) if k_ == 'M_' else shape))
 
         # `tensor.expand(size)` needs `tensor.shape` broadcastable with `size`
         if k_ == 'M_':
-            if v_.shape != self.shape[:1]+(self.nM, 3):  # (N, nM, xyz)
-                v_ = v_.expand(self.shape[:1]+(self.nM, 3)).clone()
+            if v_.shape != shape[:1]+(self.nM, 3):  # (N, nM, xyz)
+                v_ = v_.expand(shape[:1]+(self.nM, 3)).clone()
         elif k_ in self._compact:  # (T1_, T2_, γ_)
             v_ = v_.expand((self.shape[0], self.nM))  # (N, nM)
 
@@ -415,17 +440,19 @@ class SpinCube(object):
 
     def __init__(
             self, shape: tuple, fov: Tensor, mask: Tensor = None,
-            ofst: Tensor = tensor([[0., 0., 0.]]), Δf_: Tensor = tensor(0.),
-            T1_: Tensor = T1G, T2_: Tensor = T2G,
-            γ_: Tensor = γH, M_: Tensor = tensor([0., 0., 1.]),
+            ofst: Tensor = tensor([[0., 0., 0.]]),
+            Δf: Tensor = None, Δf_: Tensor = None,
+            T1: Tensor = None, T1_: Tensor = None,
+            T2: Tensor = None, T2_: Tensor = None,
+            γ: Tensor = None,  γ_: Tensor = None,
+            M: Tensor = None,  M_: Tensor = None,
             device: torch.device = torch.device('cpu'),
             dtype: torch.dtype = torch.float32):
         """
         """
-        super().__setattr__('spinarray',
-                            SpinArray(shape, mask, T1_=T1_, T2_=T2_, γ_=γ_,
-                                      M_=M_, device=device, dtype=dtype))
-        sp = self.spinarray
+        sp = SpinArray(shape, mask, T1=T1, T1_=T1_, T2=T2, T2_=T2_, γ=γ, γ_=γ_,
+                       M=M, M_=M_, device=device, dtype=dtype)
+        super().__setattr__('spinarray', sp)
 
         kw = {'device': sp.device, 'dtype': sp.dtype}
         # setattr(self, k, v), avoid computing `loc_` w/ `fov` & `ofst` not set
@@ -435,7 +462,12 @@ class SpinCube(object):
         super().__setattr__('loc_', torch.zeros((sp.shape[0], sp.nM, 3), **kw))
         self._update_loc_()  # compute `loc_` from set `fov` & `ofst`
 
-        self.Δf_ = Δf_
+        assert((Δf is None) or (Δf_ is None))
+        if Δf is None:
+            self.Δf_ = (tensor(0.) if Δf_ is None else Δf_)
+        else:
+            self.Δf = Δf
+
         return
 
     def __getattr__(self, k):  # provoked only when `__getattribute__` failed
@@ -460,13 +492,14 @@ class SpinCube(object):
         kw = {'device': sp.device, 'dtype': sp.dtype}
         v_ = (v_.to(**kw) if isinstance(v_, Tensor) else tensor(v_, **kw))
 
+        shape = sp.shape
         if k_+'_' in self._compact:  # `loc_` excluded by beginning assert
-            assert (v_.shape[:sp.ndim] == sp.shape)
-            k_, v_ = k_+'_', sp.extract(v_)
+            k_ = k_+'_'
             assert (k_ not in self._readonly), "'%s' is read-only." % k_
+            v_ = self.extract(v_.expand(shape+(3,) if k_ == 'loc_' else shape))
 
         if k_ == 'Δf_':
-            v_ = v_.expand((sp.shape[0], sp.nM))  # (N, nM)
+            v_ = v_.expand((shape[0], sp.nM))  # (N, nM)
         elif k_ in ('fov', 'ofst'):
             assert(v_.ndim == 2)
 
@@ -507,12 +540,11 @@ class SpinCube(object):
         *OUTPUTS*:
         - `beff`  | `beff_`  (N,*Nd|nM,xyz,nT)
         """
-        sp = self.spinarray
         assert ((b1Map_ is None) or (b1Map is None))
         b1Map_ = (b1Map_ if b1Map is None else self.extract(b1Map))
 
         return self.spinarray.applypulse(pulse, doEmbed=doEmbed, Δf_=self.Δf_,
-                                          loc_=self.loc_, b1Map_=b1Map_)
+                                         loc_=self.loc_, b1Map_=b1Map_)
 
     def asdict(self, toNumpy: bool = True, doEmbed: bool = True) -> dict:
         fn_np = (lambda x: x.detach().cpu().numpy() if toNumpy else
