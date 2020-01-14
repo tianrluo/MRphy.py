@@ -53,7 +53,7 @@ class Test_mobjs:
         fov, ofst = tensor([[3., 3., 3.]], **kw), tensor([[0., 0., 1.]], **kw)
         T1_, T2 = tensor([[1.]], **kw), tensor([[4e-2]], **kw)
 
-        cube = mobjs.SpinCube(shape, fov, mask=mask, T1_=T1_, γ_=γ, **kw)
+        cube = mobjs.SpinCube(shape, fov, mask=mask, T1_=T1_, γ=γ, **kw)
         cube.ofst = ofst  # separated for test coverage
 
         cube.M_ = tensor([0., 1., 0.])
