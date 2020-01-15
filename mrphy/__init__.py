@@ -2,9 +2,13 @@ from math import pi as π, inf  # noqa: F401
 import torch
 from torch import tensor
 γH = tensor(4257.6, dtype=torch.double)  # Hz/Gauss, water proton gyro freq.
-dt0 = tensor(4e-6, dtype=torch.double)   # Sec, default dwell time
 T1G = tensor(1.47, dtype=torch.double)   # Sec, T1 for gray matter
 T2G = tensor(0.07, dtype=torch.double)   # Sec, T2 for gray matter
+
+dt0 = tensor(4e-6, dtype=torch.double)   # Sec, default dwell time
+gmax0 = tensor(5, dtype=torch.double)    # Gauss/cm
+smax0 = tensor(12e3, dtype=torch.double)  # Gauss/cm/Sec
+rfmax0 = tensor(0.25, dtype=torch.double)  # Gauss
 
 _slice = slice(None)
 

@@ -1,6 +1,6 @@
-from pytest import approx
 import numpy as np
 import torch
+import pytest
 from torch import tensor, cuda
 
 from mrphy import γH, dt0
@@ -39,19 +39,19 @@ class Test_utils:
                     utils.k2g(k, False, γ=γ, dt=dt))
 
         assert(utils.g2k(gTx, True, γ=γ, dt=dt).detach().cpu().numpy() ==
-               approx(k.detach().cpu().numpy(), abs=atol))
+               pytest.approx(k.detach().cpu().numpy(), abs=atol))
 
         assert(utils.g2k(gRx, False, γ=γ, dt=dt).detach().cpu().numpy() ==
-               approx(k.detach().cpu().numpy(), abs=atol))
+               pytest.approx(k.detach().cpu().numpy(), abs=atol))
 
         dt1 = tensor([1.], **dkw)
         dt1_np, gTx_np = (dt1.detach().cpu().numpy(),
                           gTx.detach().cpu().numpy())
         assert(utils.g2s(gTx, dt=dt1).detach().cpu().numpy() ==
-               approx(np.concatenate((gTx_np[:, :, [0]],
-                                      gTx_np[:, :, 1:] - gTx_np[:, :, :-1]),
-                                     axis=2)/(dt1_np[..., None]),
-                      abs=atol))
+               pytest.approx(np.concatenate((gTx_np[:, :, [0]],
+                             gTx_np[:, :, 1:] - gTx_np[:, :, :-1]),
+                             axis=2)/(dt1_np[..., None]),
+               abs=atol))
 
         return
 
