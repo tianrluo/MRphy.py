@@ -16,10 +16,8 @@ def ctrsub(shape):
     return shape//2
 
 
-def g2k(g: torch.Tensor,
-        isTx: bool,
-        γ: torch.Tensor = tensor([[γH]]),
-        dt: torch.Tensor = tensor([[dt0]])) -> Tensor:
+def g2k(g: Tensor, isTx: bool,
+        γ: Tensor = tensor([[γH]]), dt: Tensor = tensor([[dt0]])) -> Tensor:
     """
         g2k(g, isTx, γ=γ¹H, dt=dt0)
     Compute k-space from gradient.
@@ -39,8 +37,7 @@ def g2k(g: torch.Tensor,
     return k
 
 
-def g2s(g: torch.Tensor,
-        dt: torch.Tensor = tensor([[dt0]])) -> Tensor:
+def g2s(g: Tensor, dt: Tensor = tensor([[dt0]])) -> Tensor:
     """
     *INPUTS*:
     - `g` (N, xyz, nT) "Gauss/cm", gradient
@@ -55,10 +52,8 @@ def g2s(g: torch.Tensor,
     return s
 
 
-def k2g(k: torch.Tensor,
-        isTx: bool,
-        γ: torch.Tensor = tensor([[γH]]),
-        dt: torch.Tensor = tensor([[dt0]])) -> Tensor:
+def k2g(k: Tensor, isTx: bool,
+        γ: Tensor = tensor([[γH]]), dt: Tensor = tensor([[dt0]])) -> Tensor:
     """
         k2g(k, isTx, γ=γ¹H, dt=dt0)
     Gradient, `g`, of `TxRx` k-space, (trasmit/receive, excitation/imaging).

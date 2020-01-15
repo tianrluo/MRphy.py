@@ -3,7 +3,7 @@ import torch
 from torch import tensor, Tensor
 from typing import TypeVar
 
-from mrphy import γH, dt0, T1G, T2G, π
+from mrphy import γH, dt0, gmax0, smax0, rfmax0, T1G, T2G, π
 from mrphy import utils, beffective, sims
 
 """
@@ -29,11 +29,13 @@ class Pulse(object):
     """
 
     _readonly = ('device', 'dtype')
-    __slots__ = set(_readonly + ('rf', 'gr', 'dt', 'desc'))
+    __slots__ = set(_readonly + ('rf', 'gr', 'dt', 'gmax', 'smax', 'rfmax',
+                                 'desc'))
 
     def __init__(
             self,
             rf: Tensor = None, gr: Tensor = None, dt: Tensor = dt0,
+            gmax: Tensor = gmax0, smax: Tensor = smax0, rfmax: Tensor = rfmax0,
             desc: str = "generic pulse",
             device: torch.device = torch.device('cpu'),
             dtype: torch.dtype = torch.float32):
@@ -65,7 +67,8 @@ class Pulse(object):
         super().__setattr__('rf', rf)
         super().__setattr__('gr', gr)
 
-        self.dt, self.desc = dt, desc
+        self.dt, self.gmax, self.smax, self.rfmax = dt, gmax, smax, rfmax
+        self.desc = desc
         return
 
     def __setattr__(self, k, v):
@@ -86,7 +89,7 @@ class Pulse(object):
         return
 
     def asdict(self, toNumpy: bool = True) -> dict:
-        _ = ('rf', 'gr', 'dt')
+        _ = ('rf', 'gr', 'dt', 'gmax', 'smax', 'rfmax')
         fn_np = (lambda x: x.detach().cpu().numpy() if toNumpy else
                  lambda x: x.detach())
 
