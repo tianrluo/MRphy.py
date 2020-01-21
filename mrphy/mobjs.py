@@ -29,8 +29,8 @@ class Pulse(object):
     """
 
     _readonly = ('device', 'dtype')
-    __slots__ = set(_readonly + ('rf', 'gr', 'dt', 'gmax', 'smax', 'rfmax',
-                                 'desc'))
+    _limits = ('gmax', 'smax', 'rfmax')
+    __slots__ = set(_readonly + _limits + ('rf', 'gr', 'dt', 'desc'))
 
     def __init__(
             self,

@@ -96,6 +96,22 @@ def rf_r2c(rf: ndarray) -> ndarray:
     return rf[:, 0, ...] + 1j*rf[:, 1, ...]
 
 
+def s2g(s: Tensor, dt: Tensor = tensor([[dt0]])) -> Tensor:
+    """
+        s2g(s, dt=dt0)
+    Compute gradient from slew rate.
+
+    *INPUTS*:
+    - `s` (N, xyz, nT) "Gauss/cm/Sec", Slew rate.
+    *OPTIONALS*:
+    - `dt` (N, 1,) "sec", gradient temporal step size, i.e., dwell time.
+    *OUTPUTS*:
+    - `g` (N, xyz, nT) "Gauss/cm", Gradient.
+    """
+    g = dt[..., None]*torch.cumsum(s, dim=2)
+    return g
+
+
 def uϕrot(U: Tensor, Φ: Tensor, Vi: Tensor):
     """
         Vo = uϕrot(U, Φ, Vi)
