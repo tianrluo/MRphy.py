@@ -7,8 +7,8 @@ T2G = tensor(0.07, dtype=torch.double)   # Sec, T2 for gray matter
 
 dt0 = tensor(4e-6, dtype=torch.double)   # Sec, default dwell time
 gmax0 = tensor(5, dtype=torch.double)    # Gauss/cm
-smax0 = tensor(12e3, dtype=torch.double) # Gauss/cm/Sec
-rfmax0 = tensor(0.25, dtype=torch.double) # Gauss
+smax0 = tensor(12e3, dtype=torch.double)  # Gauss/cm/Sec
+rfmax0 = tensor(0.25, dtype=torch.double)  # Gauss
 
 _slice = slice(None)
 

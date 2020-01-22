@@ -1,5 +1,5 @@
-from pytest import approx
 import torch
+import pytest
 from torch import tensor, cuda
 
 from mrphy import γH, dt0, π
@@ -89,8 +89,8 @@ class Test_sims:
         grad_beff_2 = beff.grad.clone().cpu().numpy()
 
         # %% assertion
-        assert(approx(grad_M0_1, abs=atol) == grad_M0_2)
-        assert(approx(grad_beff_1, abs=atol) == grad_beff_2)
+        assert(pytest.approx(grad_M0_1, abs=atol) == grad_M0_2)
+        assert(pytest.approx(grad_beff_1, abs=atol) == grad_beff_2)
 
 
 if __name__ == '__main__':

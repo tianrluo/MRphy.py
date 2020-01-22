@@ -1,6 +1,6 @@
-from pytest import approx
 import numpy as np
 import torch
+import pytest
 from torch import tensor, cuda
 
 from mrphy import γH, dt0, π, _slice
@@ -78,7 +78,7 @@ class Test_mobjs:
             [[[0.559535641648385,  0.663342640621335, 0.416341441715101],
               [0.391994737048090,  0.210182892388552, -0.860954821972489],
               [-0.677062008711222, 0.673391604920576, -0.143262993311057]]])
-        Mref = approx(Mo0, abs=atol)
+        Mref = pytest.approx(Mo0, abs=atol)
 
         assert(self.np(Mres1[0:1, 1, :, 1, :]) == Mref)
         assert(self.np(Mres1[0:1, :, 1, 1, :]) == Mref)
