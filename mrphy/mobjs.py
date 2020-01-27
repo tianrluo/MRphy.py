@@ -26,6 +26,9 @@ class Pulse(object):
     - `gr` (N,xyz,nT) "Gauss/cm"
     - `dt` (N,1,), "Sec" simulation temporal step size, i.e., dwell time.
     - `desc` str, an description of the pulse to be constructed.
+    - `gmax` (N, xyz|1) "Gauss/cm", max |gradient|.
+    - `smax` (N, xyz|1) "Gauss/cm/Sec", max |slew rate|.
+    - `rfmax` (N,(nCoils)) "Gauss", max |RF|.
     """
 
     _readonly = ('device', 'dtype')
@@ -84,6 +87,10 @@ class Pulse(object):
         if (k == 'rf'):
             shape = self.gr.shape
             assert (v.shape[0] == shape[0] and v.shape[2] == shape[2])
+        if (k in ('gmax', 'smax')):
+            v = v.expand(self.gr.shape[:2])
+        if (k == 'rfmax' and v.ndim == 2 and v.shape[1] == 1):
+            v = v[:, 0]
 
         super().__setattr__(k, v)
         return
