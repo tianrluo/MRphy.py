@@ -21,17 +21,32 @@ SpinCube = TypeVar('SpinCube', bound='SpinCube')
 
 class Pulse(object):
     """
-    # Attributes:
+        Pulse(;rf, gr, dt, gmax, smax, rfmax, desc, device, dtype)
+    *INPUTS*:
+    - `rf` (N,xy, nT,(nCoils)) "Gauss", `xy` for separating real and imag part.
+    - `gr` (N,xyz,nT) "Gauss/cm"
+    - `dt` (N,1,), "Sec" simulation temporal step size, i.e., dwell time.
+    - `gmax` (N, xyz|1) "Gauss/cm", max |gradient|.
+    - `smax` (N, xyz|1) "Gauss/cm/Sec", max |slew rate|.
+    - `rfmax` (N,(nCoils)) "Gauss", max |RF|.
+    - `desc` str, an description of the pulse to be constructed.
+    - `device` torch.device; `dtype` torch.dtype
+
+    *PROPERTIES*:
+    - `device`
+    - `dtype`
+    - `is_cuda`
+    - `shape` (N,1,nT)
+    - `gmax` (N, xyz|1) "Gauss/cm", max |gradient|.
+    - `smax` (N, xyz|1) "Gauss/cm/Sec", max |slew rate|.
+    - `rfmax` (N,(nCoils)) "Gauss", max |RF|.
     - `rf` (N,xy, nT,(nCoils)) "Gauss", `xy` for separating real and imag part.
     - `gr` (N,xyz,nT) "Gauss/cm"
     - `dt` (N,1,), "Sec" simulation temporal step size, i.e., dwell time.
     - `desc` str, an description of the pulse to be constructed.
-    - `gmax` (N, xyz|1) "Gauss/cm", max |gradient|.
-    - `smax` (N, xyz|1) "Gauss/cm/Sec", max |slew rate|.
-    - `rfmax` (N,(nCoils)) "Gauss", max |RF|.
     """
 
-    _readonly = ('device', 'dtype')
+    _readonly = ('device', 'dtype', 'is_cuda', 'shape')
     _limits = ('gmax', 'smax', 'rfmax')
     __slots__ = set(_readonly + _limits + ('rf', 'gr', 'dt', 'desc'))
 
@@ -52,24 +67,22 @@ class Pulse(object):
 
         super().__setattr__('device', device)
         super().__setattr__('dtype', dtype)
+        super().__setattr__('is_cuda', self.device.type == 'cuda')
 
         kw = {'device': self.device, 'dtype': self.dtype}
 
         if rf_miss:
             N, nT = gr.shape[0], gr.shape[2]
             rf = torch.zeros((N, 2, nT), **kw)
-
-        if gr_miss:
+        else:
             N, nT = rf.shape[0], rf.shape[2]
-            gr = torch.zeros((N, 3, nT), **kw)
+            if gr_miss:
+                gr = torch.zeros((N, 3, nT), **kw)
+            else:
+                assert (N == gr.shape[0] and nT == gr.shape[2])
+        super().__setattr__('shape', torch.Size((N, 1, nT)))
 
-        # super() here, as self.__setattr__() has interdependent sanity check.
-        rf, gr = rf.to(**kw), gr.to(**kw)
-        assert (rf.shape[0] == gr.shape[0] and rf.shape[2] == gr.shape[2])
-
-        super().__setattr__('rf', rf)
-        super().__setattr__('gr', gr)
-
+        self.rf, self.gr = rf.to(**kw), gr.to(**kw)
         self.dt, self.gmax, self.smax, self.rfmax = dt, gmax, smax, rfmax
         self.desc = desc
         return
@@ -81,12 +94,8 @@ class Pulse(object):
             kw = {'device': self.device, 'dtype': self.dtype}
             v = (v.to(**kw) if isinstance(v, Tensor) else tensor(v, **kw))
 
-        if (k == 'gr'):
-            shape = self.rf.shape
-            assert (v.shape[0] == shape[0] and v.shape[2] == shape[2])
-        if (k == 'rf'):
-            shape = self.gr.shape
-            assert (v.shape[0] == shape[0] and v.shape[2] == shape[2])
+        if k in ('rf', 'gr'):
+            assert(v.shape[0] == self.shape[0] and v.shape[2] == self.shape[2])
         if (k in ('gmax', 'smax')):
             v = v.expand(self.gr.shape[:2])
         if (k == 'rfmax' and v.ndim == 2 and v.shape[1] == 1):
@@ -97,8 +106,8 @@ class Pulse(object):
 
     def asdict(self, toNumpy: bool = True) -> dict:
         _ = ('rf', 'gr', 'dt', 'gmax', 'smax', 'rfmax')
-        fn_np = (lambda x: x.detach().cpu().numpy() if toNumpy else
-                 lambda x: x.detach())
+        fn_np = ((lambda x: x.detach().cpu().numpy()) if toNumpy else
+                 (lambda x: x.detach()))
 
         d = {k: fn_np(getattr(self, k)) for k in _}
         d.update({k: getattr(self, k) for k in ('desc', 'device', 'dtype')})
@@ -180,7 +189,7 @@ class SpinArray(object):
     `M_`, etc., avoiding repetitive allocations.
     """
 
-    _readonly = ('shape', 'mask', 'device', 'dtype', 'ndim', 'nM')
+    _readonly = ('shape', 'mask', 'device', 'dtype', 'is_cuda', 'ndim', 'nM')
     _compact = ('T1_', 'T2_', 'γ_', 'M_')
     __slots__ = set(_readonly + _compact)
 
@@ -207,6 +216,7 @@ class SpinArray(object):
         super().__setattr__('nM', torch.sum(mask).item())
         super().__setattr__('device', device)
         super().__setattr__('dtype', dtype)
+        super().__setattr__('is_cuda', self.device.type == 'cuda')
 
         assert((T1 is None) or (T1_ is None))
         if T1 is None:
@@ -301,8 +311,8 @@ class SpinArray(object):
         return M_
 
     def asdict(self, toNumpy: bool = True, doEmbed: bool = True) -> dict:
-        fn_np = (lambda x: x.detach().cpu().numpy() if toNumpy else
-                 lambda x: x.detach())
+        fn_np = ((lambda x: x.detach().cpu().numpy()) if toNumpy else
+                 (lambda x: x.detach()))
 
         _ = (('T1', 'T2', 'γ', 'M') if doEmbed else ('T1_', 'T2_', 'γ_', 'M_'))
         d = {k: fn_np(getattr(self, k)) for k in _}
@@ -557,8 +567,8 @@ class SpinCube(object):
                                          loc_=self.loc_, b1Map_=b1Map_)
 
     def asdict(self, toNumpy: bool = True, doEmbed: bool = True) -> dict:
-        fn_np = (lambda x: x.detach().cpu().numpy() if toNumpy else
-                 lambda x: x.detach())
+        fn_np = ((lambda x: x.detach().cpu().numpy()) if toNumpy else
+                 (lambda x: x.detach()))
 
         _ = (('loc', 'Δf') if doEmbed else ('loc', 'Δf'))
         d = {k: fn_np(getattr(self, k)) for k in _}
@@ -658,8 +668,9 @@ class Examples(object):
                         10*torch.atan(t - round(nT/2))/π], 1)  # (1,xyz,nT)
 
         # Pulse
-        print('Pulse(rf=rf, gr=gr, dt=gt, device=device, dtype=dtype)')
-        return Pulse(rf=rf, gr=gr, dt=dt, **kw)
+        p = Pulse(rf=rf, gr=gr, dt=dt, **kw)
+        print('Pulse(rf=rf, gr=gr, dt=gt, device=device, dtype=dtype): ')
+        return p
 
     @staticmethod
     def spincube() -> SpinCube:

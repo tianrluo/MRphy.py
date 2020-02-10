@@ -27,6 +27,12 @@ class Test_mobjs:
     def np(x):
         return x.detach().cpu().numpy()
 
+    def test_Examples(self):
+        ''' for coverage :/ '''
+        assert(isinstance(mobjs.Examples.pulse(), mobjs.Pulse))
+        assert(isinstance(mobjs.Examples.spincube(), mobjs.SpinCube))
+        return
+
     def test_mobjs(self):
         kw, atol = self.dkw, self.atol
         γ, dt = self.γ, dt0  # For test coverage, not using self.dt here.
@@ -45,6 +51,8 @@ class Test_mobjs:
 
         # Pulse
         p = mobjs.Pulse(rf=rf, gr=gr, dt=dt, **kw)
+        assert(p.is_cuda == (p.device.type == 'cuda'))
+        p = mobjs.Pulse(**(p.asdict(toNumpy=False)))
 
         # SpinCube (SpinArray is implicitly tested via it)
         shape = (N, *Nd)
@@ -54,6 +62,11 @@ class Test_mobjs:
         T1_, T2 = tensor([[1.]], **kw), tensor([[4e-2]], **kw)
 
         cube = mobjs.SpinCube(shape, fov, mask=mask, T1_=T1_, γ=γ, **kw)
+        assert(cube.is_cuda == (cube.device.type == 'cuda'))
+        cube_dict = cube.asdict(toNumpy=False)
+        cube = mobjs.SpinCube(**{k: cube_dict[k] for
+                                 k in ('shape', 'fov', 'mask', 'T1', 'γ'
+                                       )+tuple(kw.keys())})
         cube.ofst = ofst  # separated for test coverage
 
         cube.M_ = tensor([0., 1., 0.])

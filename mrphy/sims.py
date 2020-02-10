@@ -9,7 +9,7 @@ from mrphy import T1G, T2G, γH, dt0, π
 
 
 # TODO:
-# - Avoid cache when needs_input_grad is False
+# - Avoid caching when needs_input_grad is False
 # - Create `BlochSim_rfgr` that directly computes grads w.r.t. `rf` and `gr`.
 
 

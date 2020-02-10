@@ -1,11 +1,18 @@
-from typing import Tuple
+from typing import Tuple, Union
+from numbers import Number
 
-import numpy as np
-from numpy import ndarray
 import torch
+import numpy as np
+from numpy import ndarray as ndarray_c
 from torch import tensor, Tensor
 
 from mrphy import γH, dt0, π
+if torch.cuda.is_available():
+    import cupy as cp
+    from cupy import ndarray as ndarray_g
+    ndarrayA = Union[ndarray_c, ndarray_g]
+else:
+    ndarrayA = ndarray_c
 
 
 def ctrsub(shape):
@@ -85,7 +92,7 @@ def k2g(k: Tensor, isTx: bool,
     return g
 
 
-def rf_c2r(rf: ndarray) -> ndarray:
+def rf_c2r(rf: ndarrayA) -> ndarrayA:
     """
         rf_c2r(rf)
     *INPUTS*:
@@ -96,10 +103,13 @@ def rf_c2r(rf: ndarray) -> ndarray:
     See Also:
     `rf_r2c`
     """
-    return np.concatenate((np.real(rf), np.imag(rf)), axis=1)
+    if isinstance(rf, ndarray_c):
+        return np.concatenate((np.real(rf), np.imag(rf)), axis=1)
+    else:  # ndarray_g, i.e., cupy.ndarray
+        return cp.concatenate((cp.real(rf), cp.imag(rf)), axis=1)
 
 
-def rf_r2c(rf: ndarray) -> ndarray:
+def rf_r2c(rf: ndarrayA) -> ndarrayA:
     """
         rf_r2c(rf)
     *INPUTS*:
@@ -110,7 +120,7 @@ def rf_r2c(rf: ndarray) -> ndarray:
     See Also:
     `rf_c2r`
     """
-    return rf[:, 0, ...] + 1j*rf[:, 1, ...]
+    return rf[:, [0], ...] + 1j*rf[:, [1], ...]
 
 
 def rf2tρθ(rf: Tensor, rfmax: Tensor) -> Tuple[Tensor, Tensor]:
@@ -126,25 +136,29 @@ def rf2tρθ(rf: Tensor, rfmax: Tensor) -> Tuple[Tensor, Tensor]:
     See Also:
     `tρθ2rf`
     """
+    rfmax = rfmax[None] if rfmax.ndim == 0 else rfmax
     tρ = (rf.norm(dim=1, keepdim=True)/rfmax[:, None, None, ...]*π/2).tan()
     θ = torch.atan2(rf[:, [1], :], rf[:, [0], :])
     return tρ, θ
 
 
-def rfclamp(rf: Tensor, rfmax: Tensor) -> Tensor:
+def rfclamp(rf: Tensor, rfmax: Tensor, eps: Number = 1e-7) -> Tensor:
     """
         rfclamp(rf, rfmax)
     *INPUTS*:
     - `rf` (N, xy, nT, (nCoils)) RF pulse, Gauss, x for real, y for imag.
     - `rfmax` (N, (nCoils)) RF pulse, Gauss, x for real, y for imag.
+    *OPTIONALS*:
+    - `eps` effective `rfmax` is `rfmax-eps`, numerical precession.
     *OUTPUTS*:
     - `rf` (N, xy, nT, (nCoils)) |RF| clampled at rfmax
 
     See Also:
     `sclamp`
     """
+    rfmax = rfmax[None] if rfmax.ndim == 0 else rfmax
     rf_abs = rf.norm(dim=1, keepdim=True)
-    return rf.mul((rfmax[:, None, None, ...]/rf_abs).clamp_(max=1))
+    return rf.mul(((rfmax[:, None, None, ...]-eps)/rf_abs).clamp_(max=1))
 
 
 def s2g(s: Tensor, dt: Tensor = tensor([[dt0]])) -> Tensor:
@@ -193,6 +207,7 @@ def sclamp(s: Tensor, smax: Tensor) -> Tensor:
     See Also:
     `rfclamp`
     """
+    smax = (smax[None] if smax.ndim == 0 else smax).to(s)  # device & dtype
     return s.max(-smax[..., None]).min(smax[..., None])
 
 
@@ -224,6 +239,7 @@ def tρθ2rf(tρ: Tensor, θ: Tensor, rfmax: Tensor) -> Tensor:
     See Also:
     `rf2tρθ`
     """
+    rfmax = rfmax[None] if rfmax.ndim == 0 else rfmax
     rfmax = rfmax[:, None, None, ...]  # -> (N, 1, 1, (nCoils))
     return tρ.atan()/π*2*rfmax*torch.cat((θ.cos(), θ.sin()), dim=1)
 

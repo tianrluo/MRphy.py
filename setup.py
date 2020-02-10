@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages
 import ctypes
 
+
 def cuda_is_available():
     libnames = ('libcuda.so', 'libcuda.dylib', 'cuda.dll')
     for name in libnames:
@@ -14,6 +15,7 @@ def cuda_is_available():
         return False
     return False
 
+
 REQUIRED_PACKAGES = ['torch>=1.3', 'numpy', 'cupy>=7.0.0']
 if not cuda_is_available():
     REQUIRED_PACKAGES.remove('cupy>=7.0.0')
@@ -23,7 +25,7 @@ with open("README.md", "r") as h:
 
 setup(
     name="mrphy",
-    version="0.1.3",
+    version="0.1.4",
     author="Tianrui Luo",
     author_email="tianrluo@umich.edu",
     description="A Pytorch based tool for MR physics simulations",
