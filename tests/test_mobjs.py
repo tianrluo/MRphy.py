@@ -84,17 +84,28 @@ class Test_mobjs:
 
         cube.Δf = torch.sum(-loc[0:1, :, :, :, 0:2], dim=-1) * γ
 
-        Mres1 = cube.applypulse(p, doEmbed=True)
+        Mres1a = cube.applypulse(p, doEmbed=True)
+        Mres1b = cube.applypulse(p, doEmbed=True, doRelax=False)
 
         # assertion
-        Mo0 = np.array(
+        Mo0a = np.array(
             [[[0.559535641648385,  0.663342640621335, 0.416341441715101],
               [0.391994737048090,  0.210182892388552, -0.860954821972489],
               [-0.677062008711222, 0.673391604920576, -0.143262993311057]]])
-        Mref = pytest.approx(Mo0, abs=atol)
 
-        assert(self.np(Mres1[0:1, 1, :, 1, :]) == Mref)
-        assert(self.np(Mres1[0:1, :, 1, 1, :]) == Mref)
+        Mo0b = np.array(
+            [[[0.584337330324116,  0.686096989146395, 0.433382978292808],
+              [0.404188676945936,  0.217027890590635, -0.888555236400348],
+              [-0.703691265981316, 0.694384487290747, -0.150495136106067]]])
+
+        Mrefa = pytest.approx(Mo0a, abs=atol)
+        Mrefb = pytest.approx(Mo0b, abs=atol)
+
+        assert(self.np(Mres1a[0:1, 1, :, 1, :]) == Mrefa)
+        assert(self.np(Mres1a[0:1, :, 1, 1, :]) == Mrefa)
+
+        assert(self.np(Mres1b[0:1, 1, :, 1, :]) == Mrefb)
+        assert(self.np(Mres1b[0:1, :, 1, 1, :]) == Mrefb)
 
         return
 

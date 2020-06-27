@@ -64,33 +64,69 @@ class Test_sims:
         beff.requires_grad = True
 
         # %% sim
+        print('\nblochsim tests:')
         t = time.time()
-        Mo_1 = slowsims.blochsim(M0, beff, T1=T1, T2=T2, γ=γ, dt=dt)
+        Mo_1a = slowsims.blochsim(M0, beff, T1=T1, T2=T2, γ=γ, dt=dt)
         print('forward: slowsims.blochsim', time.time() - t)
 
-        res1 = torch.sum(Mo_1)
+        res1a = torch.sum(Mo_1a)
         t = time.time()
-        res1.backward()  # keep graph to check `bar.backward()`
+        res1a.backward()  # keep graph to check `bar.backward()`
         print('backward: slowsims.blochsim', time.time() - t)
-        grad_M0_1 = M0.grad.clone().cpu().numpy()
-        grad_beff_1 = beff.grad.clone().cpu().numpy()
+        grad_M0_1a = M0.grad.clone().cpu().numpy()
+        grad_beff_1a = beff.grad.clone().cpu().numpy()
 
         M0.grad, beff.grad = None, None
 
         t = time.time()
-        Mo_2 = sims.blochsim(M0, beff, T1=T1, T2=T2, γ=γ, dt=dt)
+        Mo_2a = sims.blochsim(M0, beff, T1=T1, T2=T2, γ=γ, dt=dt)
         print('forward: sims.blochsim', time.time() - t)
 
-        res2 = torch.sum(Mo_2)
+        res2a = torch.sum(Mo_2a)
         t = time.time()
-        res2.backward()  # keep graph to check `bar.backward()`
+        res2a.backward()  # keep graph to check `bar.backward()`
         print('backward: sims.blochsim', time.time() - t)
-        grad_M0_2 = M0.grad.clone().cpu().numpy()
-        grad_beff_2 = beff.grad.clone().cpu().numpy()
+        grad_M0_2a = M0.grad.clone().cpu().numpy()
+        grad_beff_2a = beff.grad.clone().cpu().numpy()
+
+        M0.grad, beff.grad = None, None
 
         # %% assertion
-        assert(pytest.approx(grad_M0_1, abs=atol) == grad_M0_2)
-        assert(pytest.approx(grad_beff_1, abs=atol) == grad_beff_2)
+        assert(pytest.approx(grad_M0_1a, abs=atol) == grad_M0_2a)
+        assert(pytest.approx(grad_beff_1a, abs=atol) == grad_beff_2a)
+
+        # %% sim w/o relaxations
+        print('\nblochsim tests (no relaxations):')
+        t = time.time()
+        Mo_1b = slowsims.blochsim(M0, beff, T1=None, T2=None, γ=γ, dt=dt)
+        print('forward: slowsims.blochsim', time.time() - t)
+
+        res1b = torch.sum(Mo_1b)
+        t = time.time()
+        res1b.backward()  # keep graph to check `bar.backward()`
+        print('backward: slowsims.blochsim', time.time() - t)
+        grad_M0_1b = M0.grad.clone().cpu().numpy()
+        grad_beff_1b = beff.grad.clone().cpu().numpy()
+
+        M0.grad, beff.grad = None, None
+
+        t = time.time()
+        Mo_2b = sims.blochsim(M0, beff, T1=None, T2=None, γ=γ, dt=dt)
+        print('forward: sims.blochsim', time.time() - t)
+
+        res2b = torch.sum(Mo_2b)
+        t = time.time()
+        res2b.backward()  # keep graph to check `bar.backward()`
+        print('backward: sims.blochsim', time.time() - t)
+        grad_M0_2b = M0.grad.clone().cpu().numpy()
+        grad_beff_2b = beff.grad.clone().cpu().numpy()
+
+        M0.grad, beff.grad = None, None
+
+        # %% assertion
+        assert(pytest.approx(grad_M0_1b, abs=atol) == grad_M0_2b)
+        assert(pytest.approx(grad_beff_1b, abs=atol) == grad_beff_2b)
+
 
 
 if __name__ == '__main__':

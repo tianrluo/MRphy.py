@@ -15,23 +15,24 @@ def cuda_is_available():
         return False
     return False
 
+REQUIRED_PACKAGES = ['torch>=1.3', 'numpy']
 
-REQUIRED_PACKAGES = ['torch>=1.3', 'numpy', 'cupy>=7.0.0']
-if not cuda_is_available():
-    REQUIRED_PACKAGES.remove('cupy>=7.0.0')
+# REQUIRED_PACKAGES = ['torch>=1.3', 'numpy', 'cupy>=7.0.0']
+# if not cuda_is_available():
+#     REQUIRED_PACKAGES.remove('cupy>=7.0.0')
 
 with open("README.md", "r") as h:
     long_description = h.read()
 
 setup(
     name="mrphy",
-    version="0.1.4",
+    version="0.1.5",
     author="Tianrui Luo",
     author_email="tianrluo@umich.edu",
     description="A Pytorch based tool for MR physics simulations",
     license='MIT',
     long_description=long_description,
-    long_description_content_type="text/x-rst",
+    long_description_content_type="text/markdown",
     url="https://github.com/tianrluo/MRphy.py",
     packages=find_packages(),
     install_requires=REQUIRED_PACKAGES,

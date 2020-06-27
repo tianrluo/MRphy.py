@@ -1,8 +1,27 @@
 # MRphy.py
 
 Yet a pytorch based Bloch simulator.
+[![](https://img.shields.io/badge/docs-stable-blue.svg)](https://tianrluo.github.io/MRphy.py/stable/index.html)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://tianrluo.github.io/MRphy.py/dev/index.html)
 [![codecov](https://codecov.io/gh/tianrluo/MRphy.py/branch/master/graph/badge.svg?token=83sKL5NADl)](https://codecov.io/gh/tianrluo/MRphy.py)
 [![Actions Status](https://github.com/tianrluo/MRphy.py/workflows/Python%20package/badge.svg)](https://github.com/tianrluo/MRphy.py/actions)
+
+Infrastructure of:\
+[Joint Design of RF and Gradient Waveforms via Auto-Differentiation for 3D Tailored Exitation in MRI](https://arxiv.org/abs/2008.10594)
+
+cite as:
+
+```bib
+@misc{luo2020joint,
+  title={Joint Design of RF and gradient waveforms via auto-differentiation for 3D tailored excitation in MRI},
+  author={Tianrui Luo and Douglas C. Noll and Jeffrey A. Fessler and Jon-Fredrik Nielsen},
+  year={2020},
+  eprint={2008.10594},
+  archivePrefix={arXiv},
+  primaryClass={eess.IV},
+  url={https://arxiv.org/abs/2008.10594}
+}
+```
 
 ## Branches
 
@@ -15,12 +34,11 @@ When enough updates have been accumulated, `dev` will be git squashed into one l
 
 ## Installation
 
-The package is not yet sent to `pip` or `conda`.
-To use it, navigate to the repo's root directory; then in your command line, type:
-
 ```sh
-pip install .
+pip install mrphy
 ```
+
+(The package is not yet sent to `conda`.)
 
 ## Demos
 
