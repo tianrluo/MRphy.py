@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 import torch
 from torch import Tensor
@@ -17,15 +17,26 @@ class BlochSim(Function):
 
     @staticmethod
     def forward(
-            ctx: CTX, Mi: Tensor, Beff: Tensor, T1: Tensor, T2: Tensor,
+            ctx: CTX, Mi: Tensor, Beff: Tensor,
+            T1: Optional[Tensor], T2: Optional[Tensor],
             γ: Tensor, dt: Tensor) -> Tensor:
         NNd, nT = Beff.shape[:-2], Beff.shape[-1]
 
         # %% Preprocessing
-        E1, E2, γ2πdt = torch.exp(-dt/T1), torch.exp(-dt/T2), 2*π*γ*dt
-        E, e1_1 = torch.cat((E2, E2, E1), dim=-2), E1-1
+        γ2πdt = 2*π*γ*dt
         Mi = Mi.clone()  # isolate
         γBeff = γ2πdt*Beff
+
+        assert((T1 is None) == (T2 is None))  # both or neither
+
+        if T1 is None:  # relaxations ignored
+            E = e1_1 = None
+            fn_relax_ = lambda m1: None  # noqa: E731
+        else:
+            E1, E2 = torch.exp(-dt/T1), torch.exp(-dt/T2)
+            E, e1_1 = torch.cat((E2, E2, E1), dim=-2), E1-1
+            fn_relax_ = lambda m1: (m1.mul_(E)  # noqa: E731
+                                    )[..., 2:3, :].sub_(e1_1)
 
         # Pre-allocate intermediate variables, in case of overhead alloc's
         u = γBeff.new_empty(NNd+(3, 1))
@@ -50,8 +61,7 @@ class BlochSim(Function):
             m1.mul_(-sϕ).add_(cϕ*m0+(1-cϕ)*utm0*u)  # -sϕ: BxM -> MxB
 
             # Relaxation
-            m1.mul_(E)
-            m1[..., 2:3, :].sub_(e1_1)
+            fn_relax_(m1)
 
             m0 = m1
 
@@ -75,6 +85,18 @@ class BlochSim(Function):
         NNd = γBeff.shape[:-2]
         Mi = Mi[..., None]  # (N, *Nd, xyz, 1)
 
+        # assert((E is None) == (e1_1 is None))  # both or neither
+        if E is None:  # relaxations ignored
+            fn_relax_h1_ = lambda h1: None  # noqa: E731
+            fn_relax_m1_ = lambda m1: None  # noqa: E731
+        else:
+            fn_relax_h1_ = lambda h1: h1.mul_(E)  # noqa: E731
+
+            def fn_relax_m1_(m1):
+                m1[..., 2:3, :].add_(e1_1)
+                m1.div_(E)
+                return
+
         # Pre-allocate intermediate variables, in case of overhead alloc's
         h0, h1 = γBeff.new_empty(NNd+(3, 1)), (grad_Mo.clone())[..., None]
         uxh1, m0xh1 = (γBeff.new_empty(NNd+(3, 1)) for _ in range(2))
@@ -85,9 +107,6 @@ class BlochSim(Function):
         u_dflt = γBeff.new_tensor([[0.], [0.], [1.]])  # (xyz, 1)
         for m0, γbeff in zip(reversed((Mi,)+Mhst.split(1, dim=-1)[:-1]),
                              reversed(γBeff.split(1, dim=-1))):
-            # Relaxation:
-            h1.mul_(E)  # h₁ → h̃₁
-
             # Rotations:
             torch.norm(γbeff, dim=-2, keepdim=True, out=ϕ)
             ϕ.clamp_(min=1e-12)
@@ -100,6 +119,9 @@ class BlochSim(Function):
             # Resolve singularities
             if torch.any(ϕis0):
                 u[ϕis0[..., 0, 0]] = u_dflt  # TODO: Adaptive approach?
+
+            # Relaxation:
+            fn_relax_h1_(h1)  # h₁ → h̃₁
 
             torch.sum(u*h1, dim=-2, keepdim=True, out=uth1)  # uᵀh̃₁
             torch.sum(u*m0, dim=-2, keepdim=True, out=utm0)  # uᵀm₀
@@ -119,8 +141,7 @@ class BlochSim(Function):
                 cϕ[ϕis0], sϕ[ϕis0] = 0, 1
 
             # m₁ → m̃₁ → (m̃₁ - sϕ⋅m₀)⨀(u×h̃₁)
-            m1[..., 2:3, :].add_(e1_1)
-            m1.div_(E)
+            fn_relax_m1_(m1)
             m1.sub_(sϕ*m0).mul_(uxh1)
 
             # h̃₁ → (cϕ-1)/ϕ*(uᵀm₀*h̃₁+uᵀh̃₁*m₀)
@@ -148,7 +169,7 @@ class BlochSim(Function):
 
 def blochsim(
         Mi: Tensor, Beff: Tensor,
-        T1: Tensor = T1G, T2: Tensor = T2G,
+        T1: Optional[Tensor] = T1G, T2: Optional[Tensor] = T2G,
         γ: Tensor = γH, dt: Tensor = dt0) -> Tensor:
     """
     *INPUTS*:
@@ -169,7 +190,13 @@ def blochsim(
     # %% Defaults and move to the same device
     assert(Mi.shape[:-1] == Beff.shape[:-2])
     Beff = Beff.to(Mi.device)
-    T1, T2, γ, dt = (x.reshape(x.shape+(Beff.dim()-x.dim())*(1,))
-                     for x in (T1, T2, γ, dt))  # (N, *Nd, :, :) compatible
+
+    assert((T1 is None) == (T2 is None))  # both or neither
+    if T1 is None:
+        γ, dt = (x.reshape(x.shape+(Beff.dim()-x.dim())*(1,))
+                 for x in (γ, dt))  # (N, *Nd, :, :) compatible
+    else:
+        T1, T2, γ, dt = (x.reshape(x.shape+(Beff.dim()-x.dim())*(1,))
+                         for x in (T1, T2, γ, dt))  # (N, *Nd, :, :) compatible
 
     return BlochSim.apply(Mi, Beff, T1, T2, γ, dt)

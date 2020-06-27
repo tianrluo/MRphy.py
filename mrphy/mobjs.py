@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torch import tensor, Tensor
-from typing import TypeVar
+from typing import TypeVar, Optional
 
 from mrphy import γH, dt0, gmax0, smax0, rfmax0, T1G, T2G, π
 from mrphy import utils, beffective, sims
@@ -52,7 +52,8 @@ class Pulse(object):
 
     def __init__(
             self,
-            rf: Tensor = None, gr: Tensor = None, dt: Tensor = dt0,
+            rf: Optional[Tensor] = None, gr: Optional[Tensor] = None,
+            dt: Tensor = dt0,
             gmax: Tensor = gmax0, smax: Tensor = smax0, rfmax: Tensor = rfmax0,
             desc: str = "generic pulse",
             device: torch.device = torch.device('cpu'),
@@ -116,7 +117,8 @@ class Pulse(object):
 
     def beff(
             self, loc: Tensor,
-            Δf: Tensor = None, b1Map: Tensor = None, γ: Tensor = γH) -> Tensor:
+            Δf: Optional[Tensor] = None, b1Map: Optional[Tensor] = None,
+            γ: Tensor = γH) -> Tensor:
         """
         *INPUTS*:
         - `loc`   (N,*Nd,xyz) "cm", locations.
@@ -194,11 +196,11 @@ class SpinArray(object):
     __slots__ = set(_readonly + _compact)
 
     def __init__(
-            self, shape: tuple, mask: Tensor = None,
-            T1: Tensor = None, T1_: Tensor = None,
-            T2: Tensor = None, T2_: Tensor = None,
-            γ: Tensor = None,  γ_: Tensor = None,
-            M: Tensor = None,  M_: Tensor = None,
+            self, shape: tuple, mask: Optional[Tensor] = None,
+            T1: Optional[Tensor] = None, T1_: Optional[Tensor] = None,
+            T2: Optional[Tensor] = None, T2_: Optional[Tensor] = None,
+            γ: Optional[Tensor] = None,  γ_: Optional[Tensor] = None,
+            M: Optional[Tensor] = None,  M_: Optional[Tensor] = None,
             device: torch.device = torch.device('cpu'),
             dtype: torch.dtype = torch.float32):
 
@@ -277,9 +279,10 @@ class SpinArray(object):
 
     def applypulse(
             self, pulse: Pulse, doEmbed: bool = False,
-            loc: Tensor = None, loc_: Tensor = None,
-            Δf: Tensor = None, Δf_: Tensor = None,
-            b1Map: Tensor = None, b1Map_: Tensor = None) -> Tensor:
+            loc: Optional[Tensor] = None, loc_: Optional[Tensor] = None,
+            Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
+            b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
+            ) -> Tensor:
         """
         *INPUTS*:
         - `pulse`
@@ -343,7 +346,7 @@ class SpinArray(object):
 
     def dim(self) -> int: return len(self.shape)
 
-    def embed(self, v_: Tensor, out: Tensor = None) -> Tensor:
+    def embed(self, v_: Tensor, out: Optional[Tensor] = None) -> Tensor:
         """
         *INPUTS*
         - `v_` (N, nM, ...), must be contiguous
@@ -360,7 +363,7 @@ class SpinArray(object):
         # out[mask] = v_.reshape((-1,)+v_.shape[2:])
         return out
 
-    def extract(self, v: Tensor, out_: Tensor = None) -> Tensor:
+    def extract(self, v: Tensor, out_: Optional[Tensor] = None) -> Tensor:
         """
         *INPUTS*
         - `v` (N, *Nd, ...)
@@ -392,9 +395,10 @@ class SpinArray(object):
 
     def pulse2beff(
             self, pulse: Pulse, doEmbed: bool = False,
-            loc: Tensor = None, loc_: Tensor = None,
-            Δf: Tensor = None, Δf_: Tensor = None,
-            b1Map: Tensor = None, b1Map_: Tensor = None) -> Tensor:
+            loc: Optional[Tensor] = None, loc_: Optional[Tensor] = None,
+            Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
+            b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
+            ) -> Tensor:
         """
         *INPUTS*:
         - `pulse`
@@ -459,13 +463,13 @@ class SpinCube(object):
     __slots__ = set(_readonly+_compact+('fov', 'ofst'))
 
     def __init__(
-            self, shape: tuple, fov: Tensor, mask: Tensor = None,
+            self, shape: tuple, fov: Tensor, mask: Optional[Tensor] = None,
             ofst: Tensor = tensor([[0., 0., 0.]]),
-            Δf: Tensor = None, Δf_: Tensor = None,
-            T1: Tensor = None, T1_: Tensor = None,
-            T2: Tensor = None, T2_: Tensor = None,
-            γ: Tensor = None,  γ_: Tensor = None,
-            M: Tensor = None,  M_: Tensor = None,
+            Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
+            T1: Optional[Tensor] = None, T1_: Optional[Tensor] = None,
+            T2: Optional[Tensor] = None, T2_: Optional[Tensor] = None,
+            γ: Optional[Tensor] = None,  γ_: Optional[Tensor] = None,
+            M: Optional[Tensor] = None,  M_: Optional[Tensor] = None,
             device: torch.device = torch.device('cpu'),
             dtype: torch.dtype = torch.float32):
         """
@@ -550,7 +554,8 @@ class SpinCube(object):
 
     def applypulse(
             self, pulse: Pulse, doEmbed: bool = False,
-            b1Map: Tensor = None, b1Map_: Tensor = None) -> Tensor:
+            b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
+            ) -> Tensor:
         """
         *INPUTS*:
         - `pulse`   (1,) mobjs.Pulse object
@@ -582,7 +587,7 @@ class SpinCube(object):
 
     def crds_(self, crds: list) -> list: return self.spinarray.crds_(crds)
 
-    def embed(self, v_: Tensor, out: Tensor = None) -> Tensor:
+    def embed(self, v_: Tensor, out: Optional[Tensor] = None) -> Tensor:
         """
         *INPUTS*
         - `v_` (N, nM, ...), must be contiguous
@@ -593,7 +598,7 @@ class SpinCube(object):
         """
         return self.spinarray.embed(v_, out=out)
 
-    def extract(self, v: Tensor, out_: Tensor = None) -> Tensor:
+    def extract(self, v: Tensor, out_: Optional[Tensor] = None) -> Tensor:
         """
         *INPUTS*
         - `v` (N, *Nd, ...)
@@ -610,8 +615,9 @@ class SpinCube(object):
 
     def pulse2beff(
             self, pulse: Pulse, doEmbed: bool = False,
-            Δf: Tensor = None, Δf_: Tensor = None,
-            b1Map: Tensor = None, b1Map_: Tensor = None) -> Tensor:
+            Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
+            b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
+            ) -> Tensor:
         """
         *INPUTS*:
         - `pulse`

@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 from torch import tensor, Tensor
+from typing import Optional
 
 from mrphy import γH, dt0, π
 from mrphy import utils
@@ -11,7 +12,8 @@ from mrphy import utils
 
 def rfgr2beff(
         rf: Tensor, gr: Tensor, loc: Tensor,
-        Δf: Tensor = None, b1Map: Tensor = None, γ: Tensor = γH):
+        Δf: Optional[Tensor] = None, b1Map: Optional[Tensor] = None,
+        γ: Tensor = γH):
     """
         beff = rfgr2beff(rf, gr, loc, Δf, b1Map, γ)
     *INPUTS*:
@@ -79,8 +81,8 @@ def beff2uϕ(beff: Tensor, γ2πdt: Tensor, dim=-1):
 
 def beff2ab(
         beff: Tensor,
-        E1: Tensor = None, E2: Tensor = None,
-        γ: Tensor = None, dt: Tensor = None):
+        E1: Optional[Tensor] = None, E2: Optional[Tensor] = None,
+        γ: Optional[Tensor] = None, dt: Optional[Tensor] = None):
     """
         beff2ab(beff, T1=(Inf), T2=(Inf), γ=γ¹H, dt=(dt0))
     Turn B-effective into Hargreave's 𝐴/𝐵, mat/vec, see: doi:10.1002/mrm.1170.

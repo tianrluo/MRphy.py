@@ -1,5 +1,6 @@
 import torch
 from torch import tensor, Tensor
+from typing import Optional
 
 from mrphy import γH, dt0, π
 from mrphy import utils, beffective
@@ -41,8 +42,8 @@ def blochsim_1step(
 
 def blochsim(
         M: Tensor, Beff: Tensor,
-        T1: Tensor = None, T2: Tensor = None,
-        γ: Tensor = None, dt: Tensor = None):
+        T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
+        γ: Optional[Tensor] = None, dt: Optional[Tensor] = None):
     """
     *INPUTS*:
     - `M` (N, *Nd, xyz), Magnetic spins, assumed equilibrium magnitude [0 0 1]
@@ -65,8 +66,8 @@ def blochsim(
     dkw = {'device': device, 'dtype': dtype}
     dt = tensor(dt0, **dkw) if (dt0 is None) else dt.to(device)
     γ = tensor(γH, **dkw) if (γ is None) else γ.to(device)
-    E1 = tensor(0, **dkw) if (T1 is None) else torch.exp(-dt/T1.to(device))
-    E2 = tensor(0, **dkw) if (T2 is None) else torch.exp(-dt/T2.to(device))
+    E1 = tensor(1, **dkw) if (T1 is None) else torch.exp(-dt/T1.to(device))
+    E2 = tensor(1, **dkw) if (T2 is None) else torch.exp(-dt/T2.to(device))
 
     # preprocessing
     E1, E2, γ, dt = map(lambda x: x.reshape(x.shape+(d-x.dim())*(1,)),
