@@ -25,7 +25,7 @@ with open("README.md", "r") as h:
 
 setup(
     name="mrphy",
-    version="0.1.4",
+    version="0.1.5",
     author="Tianrui Luo",
     author_email="tianrluo@umich.edu",
     description="A Pytorch based tool for MR physics simulations",

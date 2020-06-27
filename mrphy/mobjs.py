@@ -278,7 +278,7 @@ class SpinArray(object):
         return
 
     def applypulse(
-            self, pulse: Pulse, doEmbed: bool = False,
+            self, pulse: Pulse, doEmbed: bool = False, doRelax: bool = True,
             loc: Optional[Tensor] = None, loc_: Optional[Tensor] = None,
             Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
             b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
@@ -306,7 +306,12 @@ class SpinArray(object):
         beff_ = self.pulse2beff(pulse, loc_=loc_,
                                 Δf_=Δf_, b1Map_=b1Map_, doEmbed=False)
 
-        kw_bsim = {k[:-1]: getattr(self, k) for k in ('T1_', 'T2_', 'γ_')}
+        if doRelax:
+            kw_bsim = {'T1': self.T1_, 'T2': self.T2_}
+        else:
+            kw_bsim = {'T1': None, 'T2': None}
+
+        kw_bsim['γ'] = self.γ_
         kw_bsim['dt'] = pulse.dt
 
         M_ = sims.blochsim(self.M_, beff_, **kw_bsim)
@@ -553,7 +558,7 @@ class SpinCube(object):
         return
 
     def applypulse(
-            self, pulse: Pulse, doEmbed: bool = False,
+            self, pulse: Pulse, doEmbed: bool = False, doRelax: bool = True,
             b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
             ) -> Tensor:
         """
@@ -568,7 +573,8 @@ class SpinCube(object):
         assert ((b1Map_ is None) or (b1Map is None))
         b1Map_ = (b1Map_ if b1Map is None else self.extract(b1Map))
 
-        return self.spinarray.applypulse(pulse, doEmbed=doEmbed, Δf_=self.Δf_,
+        return self.spinarray.applypulse(pulse, doEmbed=doEmbed,
+                                         doRelax=doRelax, Δf_=self.Δf_,
                                          loc_=self.loc_, b1Map_=b1Map_)
 
     def asdict(self, toNumpy: bool = True, doEmbed: bool = True) -> dict:
