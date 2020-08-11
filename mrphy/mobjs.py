@@ -6,7 +6,7 @@ from typing import TypeVar, Optional
 from mrphy import γH, dt0, gmax0, smax0, rfmax0, T1G, T2G, π
 from mrphy import utils, beffective, sims
 
-"""
+"""Definition of objects
 """
 
 # TODO:
@@ -20,14 +20,16 @@ SpinCube = TypeVar('SpinCube', bound='SpinCube')
 
 
 class Pulse(object):
-    """
-        Pulse(;rf, gr, dt, gmax, smax, rfmax, desc, device, dtype)
+    """mrphy.mobjs.Pulse object
+
+    Usage:
+        pulse = Pulse(;rf, gr, dt, gmax, smax, rfmax, desc, device, dtype)
     *INPUTS*:
     - `rf` (N,xy, nT,(nCoils)) "Gauss", `xy` for separating real and imag part.
     - `gr` (N,xyz,nT) "Gauss/cm"
     - `dt` (N,1,), "Sec" simulation temporal step size, i.e., dwell time.
-    - `gmax` (N, xyz|1) "Gauss/cm", max |gradient|.
-    - `smax` (N, xyz|1) "Gauss/cm/Sec", max |slew rate|.
+    - `gmax` (N, xyz ⊻ 1) "Gauss/cm", max |gradient|.
+    - `smax` (N, xyz ⊻ 1) "Gauss/cm/Sec", max |slew rate|.
     - `rfmax` (N,(nCoils)) "Gauss", max |RF|.
     - `desc` str, an description of the pulse to be constructed.
     - `device` torch.device; `dtype` torch.dtype
@@ -37,8 +39,8 @@ class Pulse(object):
     - `dtype`
     - `is_cuda`
     - `shape` (N,1,nT)
-    - `gmax` (N, xyz|1) "Gauss/cm", max |gradient|.
-    - `smax` (N, xyz|1) "Gauss/cm/Sec", max |slew rate|.
+    - `gmax` (N, xyz ⊻ 1) "Gauss/cm", max |gradient|.
+    - `smax` (N, xyz ⊻ 1) "Gauss/cm/Sec", max |slew rate|.
     - `rfmax` (N,(nCoils)) "Gauss", max |RF|.
     - `rf` (N,xy, nT,(nCoils)) "Gauss", `xy` for separating real and imag part.
     - `gr` (N,xyz,nT) "Gauss/cm"
@@ -106,6 +108,16 @@ class Pulse(object):
         return
 
     def asdict(self, toNumpy: bool = True) -> dict:
+        """Convert mrphy.mobjs.Pulse object to dict
+
+        Usage:
+            d = pulse.asdict(;toNumpy)
+
+        *INPUTS*:
+        - `toNumpy` [T/f], convert `Tensor` to Numpy arrays.
+        *OUTPUTS*:
+        - `d` dict, dictionary with detached data identical to the object.
+        """
         _ = ('rf', 'gr', 'dt', 'gmax', 'smax', 'rfmax')
         fn_np = ((lambda x: x.detach().cpu().numpy()) if toNumpy else
                  (lambda x: x.detach()))
@@ -119,7 +131,10 @@ class Pulse(object):
             self, loc: Tensor,
             Δf: Optional[Tensor] = None, b1Map: Optional[Tensor] = None,
             γ: Tensor = γH) -> Tensor:
-        """
+        """Compute B-effective of provided location from the pulse
+
+        Usage:
+            beff = pulse.beff(loc; Δf, b1Map, γ)
         *INPUTS*:
         - `loc`   (N,*Nd,xyz) "cm", locations.
         *OPTIONALS*:
@@ -139,6 +154,16 @@ class Pulse(object):
 
     def to(self, device: torch.device = torch.device('cpu'),
            dtype: torch.dtype = torch.float32) -> Pulse:
+        """Duplicate the object to the prescribed device with dtype
+
+        Usage:
+            new_pulse = pulse.to(;device, dtype)
+        *INPUTS*
+        - `device` (1,) torch.device
+        - `dtype`  (1,) torch.dtype
+        *OUTPUTS*
+        - `new_pulse` (1,) mrphy.mobjs.Pulse object.
+        """
         if (self.device != device) or (self.dtype != dtype):
             return Pulse(self.rf, self.gr, dt=self.dt, desc=self.desc,
                          device=device, dtype=dtype)
@@ -148,8 +173,10 @@ class Pulse(object):
 
 
 class SpinArray(object):
-    """
-        SpinArray(shape; T1_, T2_, γ_, M_, device, dtype)
+    """mrphy.mobjs.SpinArray object
+
+    Usage:
+        spinarray = SpinArray(shape; T1_, T2_, γ_, M_, device, dtype)
     *INPUTS*:
     - `shape` tuple( (N, nx, (ny, (nz,...))) ).
     *OPTIONALS*:
@@ -283,16 +310,23 @@ class SpinArray(object):
             Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
             b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
             ) -> Tensor:
-        """
+        """Apply a pulse to the spinarray object
+
+        Typical usage:
+            M = spinarray.applypulse(pulse; loc, doEmbed=True, doRelax, Δf,
+                                     b1Map)
+            M_ = spinarray.applypulse(pulse; loc_, doEmbed=False, doRelax, Δf_,
+                                      b1Map_)
         *INPUTS*:
         - `pulse`
-        - `loc` ^ `loc_`     (N,*Nd ^ nM,xyz) "cm", locations.
+        - `loc` ⊻ `loc_`     (N,*Nd ⊻ nM,xyz) "cm", locations.
         *OPTIONALS*:
         - `doEmbed` [t/F]    return `M` or `M_`
-        - `Δf`    | `Δf_`    (N,*Nd|nM) "Hz", off-resonance.
-        - `b1Map` | `b1Map_` (N,*Nd|nM,xy,(nCoils)), transmit sensitivity.
+        - `doRelax` [T/f]    do relaxation during Bloch simulation
+        - `Δf`    ⊻ `Δf_`    (N,*Nd ⊻ nM) "Hz", off-resonance.
+        - `b1Map` ⊻ `b1Map_` (N,*Nd ⊻ nM,xy,(nCoils)), transmit sensitivity.
         *OUTPUTS*:
-        - `beff`  | `beff_`  (N,*Nd|nM,xyz,nT)
+        - `M`  ⊻ `M_`  (N,*Nd ⊻ nM,xyz)
         """
         assert ((loc_ is None) != (loc is None))  # XOR
         loc_ = (loc_ if loc is None else self.extract(loc))
@@ -319,6 +353,17 @@ class SpinArray(object):
         return M_
 
     def asdict(self, toNumpy: bool = True, doEmbed: bool = True) -> dict:
+        """Convert mrphy.mobjs.SpinArray object to dict
+
+        Usage:
+            d = spinarray.asdict(;toNumpy, doEmbed)
+
+        *INPUTS*:
+        - `toNumpy` [T/f], convert `Tensor` to Numpy arrays.
+        - `doEmbed` [T/f], embed compactly stored (nM) data to the mask (*Nd).
+        *OUTPUTS*:
+        - `d` dict, dictionary with detached data identical to the object.
+        """
         fn_np = ((lambda x: x.detach().cpu().numpy()) if toNumpy else
                  (lambda x: x.detach()))
 
@@ -330,13 +375,21 @@ class SpinArray(object):
         return d
 
     def crds_(self, crds: list) -> list:
-        """
-        Compute crds for compact attributes
+        """Compute crds for compact attributes
+
+        Data in a SpinArray object is stored compactly, such that only those
+        correspond to `1` on the `spinarray.mask` is kept.
+        This function is provided to facilitate indexing the compact data from
+        regular indices, by computing (ix, iy, iz) -> iM
+
+        Usage:
+            crds_ = spinarray.crds_(crds)
         *INPUTS*:
-        `crds`, capable indexing non-compact attributes.
+        - `crds`, indices for indexing non-compact attributes.
         *OUTPUTS*:
         - `crds_` list, `len(crds_) == 2+len(crds)-self.ndim`.
-        `v_[crds_] == v[crds]`, while `v_[crds_]=new_value` is effective.
+
+        `v_[crds_] == v[crds]`, when `v_[crds_]=new_value` is effective.
         """
         mask, ndim, nM = self.mask, self.ndim, self.nM
         assert (len(crds) >= ndim)
@@ -349,10 +402,19 @@ class SpinArray(object):
 
         return crds_
 
-    def dim(self) -> int: return len(self.shape)
+    def dim(self) -> int:
+        """Nd of the spinarray object, syntax sugar for len(spinarray.shape)
+
+        Usage:
+            Nd = spinarray.dim()
+        """
+        return len(self.shape)
 
     def embed(self, v_: Tensor, out: Optional[Tensor] = None) -> Tensor:
-        """
+        """Embed compact data into the `spinarray.mask`
+
+        Usage:
+            out = spinarray.embed(v_; out)
         *INPUTS*
         - `v_` (N, nM, ...), must be contiguous
         *OPTIONALS*
@@ -369,7 +431,10 @@ class SpinArray(object):
         return out
 
     def extract(self, v: Tensor, out_: Optional[Tensor] = None) -> Tensor:
-        """
+        """Extract data with the `spinarray.mask`, making it compact
+
+        Usage:
+            out_ = spinarray.extract(v; out_)
         *INPUTS*
         - `v` (N, *Nd, ...)
         *OPTIONALS*
@@ -387,16 +452,27 @@ class SpinArray(object):
         return out_
 
     def mask_(self, mask: Tensor) -> Tensor:
-        """
+        """Extract the compact region of an input external `mask`.
+
+        Usage:
+            mask_ = spinarray.mask_(mask)
         *INPUTS*:
         - `mask` (1, *Nd).
         *OUTPTS*:
-        - `mask_` (1, nM), `mask_` can be used on compact attributes
+        - `mask_` (1, nM), `mask_` can be used on compact attributes.
         """
         mask_ = mask(self.mask).reshape((1, -1))
         return mask_
 
-    def numel(self) -> int: return self.mask.numel()
+    def numel(self) -> int:
+        """Number of spins for the spinarray object, incompact.
+
+        Syntax sugar of `spinarray.mask.numel()`, effectively
+        `prod(spinarray.size())`.
+        Usage:
+            res = spinarray.numel()
+        """
+        return self.mask.numel()
 
     def pulse2beff(
             self, pulse: Pulse, doEmbed: bool = False,
@@ -404,16 +480,21 @@ class SpinArray(object):
             Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
             b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
             ) -> Tensor:
-        """
+        """Compute B-effective of `pulse` with the `spinarray`'s parameters
+
+        Typical usage:
+            beff = spinarray.pulse2beff(pulse; loc, doEmbed=True, Δf, b1Map)
+            beff_ = spinarray.pulse2beff(pulse; loc_, doEmbed=False, Δf_,
+                                         b1Map_)
         *INPUTS*:
         - `pulse`
-        - `loc` ^ `loc_`     (N,*Nd ^ nM,xyz) "cm", locations.
+        - `loc` ⊻ `loc_`     (N,*Nd ⊻ nM,xyz) "cm", locations.
         *OPTIONALS*:
         - `doEmbed` [t/F]  return `beff` or `beff_`
-        - `Δf`    | `Δf_`    (N,*Nd|nM) "Hz", off-resonance.
-        - `b1Map` | `b1Map_` (N,*Nd|nM,xy,(nCoils)), transmit sensitivity.
+        - `Δf`    ⊻ `Δf_`    (N,*Nd ⊻ nM) "Hz", off-resonance.
+        - `b1Map` ⊻ `b1Map_` (N,*Nd ⊻ nM,xy,(nCoils)), transmit sensitivity.
         *OUTPUTS*:
-        - `beff`  | `beff_`  (N,*Nd|nM,xyz,nT)
+        - `beff`  ⊻ `beff_`  (N,*Nd ⊻ nM,xyz,nT)
         """
         assert ((loc_ is None) != (loc is None))  # XOR
         loc_ = (loc_ if loc is None else self.extract(loc))
@@ -429,10 +510,27 @@ class SpinArray(object):
         beff_ = (self.embed(beff_) if doEmbed else beff_)
         return beff_
 
-    def size(self) -> tuple: return self.shape
+    def size(self) -> tuple:
+        """Size of the spinarray object.
+
+        Syntax sugar of `spinarray.shape`.
+        Usage:
+            sz = spinarray.size()
+        """
+        return self.shape
 
     def to(self, device: torch.device = torch.device('cpu'),
            dtype: torch.dtype = torch.float32) -> SpinArray:
+        """Duplicate the object to the prescribed device with dtype
+
+        Usage:
+            new_spinarray = spinarray.to(;device, dtype)
+        *INPUTS*
+        - `device` (1,) torch.device
+        - `dtype`  (1,) torch.dtype
+        *OUTPUTS*
+        - `new_spinarray` (1,) mrphy.mobjs.SpinArray object
+        """
         if self.device == device and self.dtype == dtype:
             return self
         return SpinArray(self.shape, self.mask, T1_=self.T1_, T2_=self.T2_,
@@ -440,7 +538,8 @@ class SpinArray(object):
 
 
 class SpinCube(object):
-    """
+    """mrphy.mobjs.SpinCube object
+
         SpinCube(shape, fov; mask, ofst, Δf_, T1_, T2_, γ_, M_, device, dtype)
     *INPUTS*:
     - `shape` Tuple `(N, nx, (ny, (nz,...)))`.
@@ -540,6 +639,13 @@ class SpinCube(object):
         return
 
     def _update_loc_(self):
+        """Update `spincube.loc_` using FOV and offset
+
+        The `spincube`'s spin locations are computed internally from set FOV and
+        offset.
+        Usage:
+            loc_ = spincube._update_loc_()
+        """
         loc_, fov, ofst = self.loc_, self.fov, self.ofst
         sp = self.spinarray
         kw = {'device': sp.device, 'dtype': sp.dtype}
@@ -561,14 +667,20 @@ class SpinCube(object):
             self, pulse: Pulse, doEmbed: bool = False, doRelax: bool = True,
             b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
             ) -> Tensor:
-        """
+        """Apply a pulse to the spincube object
+
+        Usage:
+            M = spincube.applypulse(pulse; doEmbed=True, doRelax, b1Map)
+            M_ = spincube.applypulse(pulse; doEmbed=False, doRelax, b1Map_)
+            
         *INPUTS*:
         - `pulse`   (1,) mobjs.Pulse object
         *OPTIONALS*
         - `doEmbed` [t/F]    return `M` or `M_`
-        - `b1Map` | `b1Map_` (N,*Nd|nM,xy,(nCoils)), transmit sensitivity.
+        - `doRelax` [T/f]    do relaxation during Bloch simulation
+        - `b1Map` ⊻ `b1Map_` (N,*Nd ⊻ nM,xy,(nCoils)), transmit sensitivity.
         *OUTPUTS*:
-        - `beff`  | `beff_`  (N,*Nd|nM,xyz,nT)
+        - `M`  ⊻ `M_`  (N,*Nd ⊻ nM,xyz)
         """
         assert ((b1Map_ is None) or (b1Map is None))
         b1Map_ = (b1Map_ if b1Map is None else self.extract(b1Map))
@@ -578,6 +690,17 @@ class SpinCube(object):
                                          loc_=self.loc_, b1Map_=b1Map_)
 
     def asdict(self, toNumpy: bool = True, doEmbed: bool = True) -> dict:
+        """Convert mrphy.mobjs.SpinCube object to dict
+
+        Usage:
+            d = spincube.asdict(;toNumpy, doEmbed)
+
+        *INPUTS*:
+        - `toNumpy` [T/f], convert `Tensor` to Numpy arrays.
+        - `doEmbed` [T/f], embed compactly stored (nM) data to the mask (*Nd).
+        *OUTPUTS*:
+        - `d` dict, dictionary with detached data identical to the object.
+        """
         fn_np = ((lambda x: x.detach().cpu().numpy()) if toNumpy else
                  (lambda x: x.detach()))
 
@@ -589,12 +712,38 @@ class SpinCube(object):
         d.update(self.spinarray.asdict(toNumpy=toNumpy, doEmbed=doEmbed))
         return d
 
-    def dim(self) -> int: return self.spinarray.dim()
+    def crds_(self, crds: list) -> list:
+        """Compute crds for compact attributes
 
-    def crds_(self, crds: list) -> list: return self.spinarray.crds_(crds)
+        Data in a SpinCube object is stored compactly, such that only those
+        correspond to `1` on the `spincube.mask` is kept.
+        This function is provided to facilitate indexing the compact data from
+        regular indices, by computing (ix, iy, iz) -> iM
+
+        Usage:
+            crds_ = spincube.crds_(crds)
+        *INPUTS*:
+        - `crds`, indices for indexing non-compact attributes.
+        *OUTPUTS*:
+        - `crds_` list, `len(crds_) == 2+len(crds)-self.ndim`.
+
+        `v_[crds_] == v[crds]`, when `v_[crds_]=new_value` is effective.
+        """
+        return self.spinarray.crds_(crds)
+
+    def dim(self) -> int:
+        """Nd of the spincube object, syntax sugar for len(spincube.shape)
+
+        Usage:
+            Nd = spincube.dim()
+        """
+        return self.spinarray.dim()
 
     def embed(self, v_: Tensor, out: Optional[Tensor] = None) -> Tensor:
-        """
+        """Embed compact data into the `spincube.mask`
+
+        Usage:
+            out = spincube.embed(v_; out)
         *INPUTS*
         - `v_` (N, nM, ...), must be contiguous
         *OPTIONALS*
@@ -605,7 +754,10 @@ class SpinCube(object):
         return self.spinarray.embed(v_, out=out)
 
     def extract(self, v: Tensor, out_: Optional[Tensor] = None) -> Tensor:
-        """
+        """Extract data with the `spincube.mask`, making it compact
+
+        Usage:
+            out_ = spincube.extract(v; out_)
         *INPUTS*
         - `v` (N, *Nd, ...)
         *OPTIONALS*
@@ -615,33 +767,70 @@ class SpinCube(object):
         """
         return self.spinarray.extract(v, out_=out_)
 
-    def mask_(self, mask: Tensor) -> Tensor: return self.spinarray.mask_(mask)
+    def mask_(self, mask: Tensor) -> Tensor:
+        """Extract the compact region of an input external `mask`.
 
-    def numel(self) -> int: return self.spinarray.numel()
+        Usage:
+            mask_ = spincube.mask_(mask)
+        *INPUTS*:
+        - `mask` (1, *Nd).
+        *OUTPTS*:
+        - `mask_` (1, nM), `mask_` can be used on compact attributes.
+        """
+        return self.spinarray.mask_(mask)
+
+    def numel(self) -> int:
+        """Number of spins for the spincube object, incompact.
+
+        Syntax sugar of `spincube.mask.numel()`, effectively
+        `prod(spincube.size())`.
+        Usage:
+            res = spincube.numel()
+        """
+        return self.spinarray.numel()
 
     def pulse2beff(
             self, pulse: Pulse, doEmbed: bool = False,
-            Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
             b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
             ) -> Tensor:
-        """
+        """Compute B-effective of `pulse` with the `spincube`'s parameters
+
+        Typical usage:
+            beff = spincube.pulse2beff(pulse; doEmbed=True, b1Map)
+            beff_ = spincube.pulse2beff(pulse; doEmbed=False, b1Map_)
         *INPUTS*:
         - `pulse`
         *OPTIONALS*:
         - `doEmbed` [t/F]  return `beff` or `beff_`
-        - `Δf`    | `Δf_`    (N,*Nd|nM) "Hz", off-resonance.
-        - `b1Map` | `b1Map_` (N,*Nd|nM,xy,(nCoils)), transmit sensitivity.
+        - `b1Map` ⊻ `b1Map_` (N,*Nd ⊻ nM,xy,(nCoils)), transmit sensitivity.
         *OUTPUTS*:
-        - `beff`  | `beff_`  (N,*Nd|nM,xyz,nT)
+        - `beff`  ⊻ `beff_`  (N,*Nd ⊻ nM,xyz,nT)
         """
         return self.spinarray.pulse2beff(pulse, self.loc_, doEmbed=doEmbed,
-                                         Δf=self.Δf,  Δf_=self.Δf_,
+                                         Δf_=self.Δf_,
                                          b1Map=b1Map, b1Map_=b1Map_)
 
-    def size(self) -> tuple: return self.spinarray.size()
+    def size(self) -> tuple:
+        """Size of the spincube object.
+
+        Syntax sugar of `spincube.shape`.
+        Usage:
+            sz = spincube.size()
+        """
+        return self.spinarray.size()
 
     def to(self, device: torch.device = torch.device('cpu'),
            dtype: torch.dtype = torch.float32) -> SpinCube:
+        """Duplicate the object to the prescribed device with dtype
+
+        Usage:
+            new_spincube = spincube.to(;device, dtype)
+        *INPUTS*
+        - `device` (1,) torch.device
+        - `dtype`  (1,) torch.dtype
+        *OUTPUTS*
+        - `new_spincube` (1,) mrphy.mobjs.SpinCube object
+        """
         if (self.device != device) or (self.dtype != dtype):
             return SpinCube(self.shape, self.fov, ofst=self.ofst, Δf_=self.Δf_,
                             T1_=self.T1_, T2_=self.T2_, γ_=self.γ_, M_=self.M_,

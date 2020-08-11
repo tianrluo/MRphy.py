@@ -14,7 +14,9 @@ def rfgr2beff(
         rf: Tensor, gr: Tensor, loc: Tensor,
         Δf: Optional[Tensor] = None, b1Map: Optional[Tensor] = None,
         γ: Tensor = γH):
-    """
+    """Compute B-effectives from rf and gradients
+
+    Usage:
         beff = rfgr2beff(rf, gr, loc, Δf, b1Map, γ)
     *INPUTS*:
     - `rf` (N,xy, nT,(nCoils)) "Gauss", `xy` for separating real and imag part.
@@ -63,7 +65,9 @@ def rfgr2beff(
 
 
 def beff2uϕ(beff: Tensor, γ2πdt: Tensor, dim=-1):
-    """
+    """Compute rotation axes and angles from B-effectives
+
+    Usage:
         U, Φ = beff2uϕ(beff, γ2πdt)
     *INPUTS*:
     - `beff` (N, *Nd, xyz) "Gauss", B-effective, magnetic field applied on `M`.
@@ -83,9 +87,12 @@ def beff2ab(
         beff: Tensor,
         E1: Optional[Tensor] = None, E2: Optional[Tensor] = None,
         γ: Optional[Tensor] = None, dt: Optional[Tensor] = None):
-    """
+    """Compute Hargreave's 𝐴/𝐵, mat/vec, from B-effectives
+
+    See: doi:10.1002/mrm.1170.
+
+    Usage:
         beff2ab(beff, T1=(Inf), T2=(Inf), γ=γ¹H, dt=(dt0))
-    Turn B-effective into Hargreave's 𝐴/𝐵, mat/vec, see: doi:10.1002/mrm.1170.
 
     *INPUTS*:
     - `beff`: (N,*Nd,xyz,nT).

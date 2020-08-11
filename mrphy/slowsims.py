@@ -12,8 +12,10 @@ from mrphy import utils, beffective
 def blochsim_1step(
         M: Tensor, M1: Tensor, b: Tensor,
         E1: Tensor, E1_1: Tensor, E2: Tensor, γ2πdt: Tensor):
-    """
-        blochsim_1step(M, M1, b, E1, E1_1, E2, γ2πdt)
+    """Single step bloch simulation
+
+    Usage:
+        M = blochsim_1step(M, M1, b, E1, E1_1, E2, γ2πdt)
     *INPUTS*:
     - `M` (N, *Nd, xyz), Magnetic spins, assumed equilibrium magnitude [0 0 1]
     - `M1` (N, *Nd, xyz), pre-allocated variable for `uϕrot` output.
@@ -44,7 +46,11 @@ def blochsim(
         M: Tensor, Beff: Tensor,
         T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
         γ: Optional[Tensor] = None, dt: Optional[Tensor] = None):
-    """
+    """Bloch simulator with implicit Jacobian operations.
+
+    Usage:
+        Mo = blochsim(Mi, Beff; T1, T2, γ, dt)
+        Mo = blochsim(Mi, Beff; T1=None, T2=None, γ, dt)
     *INPUTS*:
     - `M` (N, *Nd, xyz), Magnetic spins, assumed equilibrium magnitude [0 0 1]
     - `Beff` (N, *Nd, xyz, nT) "Gauss", B-effective, magnetic field applied.
@@ -93,7 +99,10 @@ def blochsim(
 
 
 def blochsim_ab(M: Tensor, A: Tensor, B: Tensor):
-    """
+    """Bloch simulation via Hargreave's mat/vec representation
+
+    Usage:
+        M = blochsim_ab(M, A, B)
     *INPUTS*:
     - `M` (N, *Nd, xyz), Magnetic spins, assumed equilibrium magnitude [0 0 1]
     - `A` (N, *Nd, xyz, 3), `A[:,iM,:,:]` is the `iM`-th 𝐴.

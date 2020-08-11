@@ -14,12 +14,28 @@ from mrphy import T1G, T2G, γH, dt0, π
 
 
 class BlochSim(Function):
+    """BlochSim with explict Jacobian operation (backward)
+    """
 
     @staticmethod
     def forward(
             ctx: CTX, Mi: Tensor, Beff: Tensor,
             T1: Optional[Tensor], T2: Optional[Tensor],
             γ: Tensor, dt: Tensor) -> Tensor:
+        """Forward evolution of Bloch simulation
+
+        *INPUTS*
+        - `ctx` (1,) pytorch CTX cacheing object
+        - `Mi` (N, *Nd, xyz), Magnetic spins, assumed equilibrium [0 0 1]
+        - `Beff` (N, *Nd, xyz, nT) "Gauss", B-effective, magnetic field.
+        *OPTIONALS*:
+        - `T1` (N, *Nd,) "Sec", T1 relaxation.
+        - `T2` (N, *Nd,) "Sec", T2 relaxation.
+        - `γ`  (N, *Nd,) "Hz/Gauss", gyro ratio in Hertz.
+        - `dt` (N, 1, ) "Sec", dwell time.
+        *OUTPUTS*:
+        - `Mo` (N, *Nd, xyz), Magetic spins after simulation.
+        """
         NNd, nT = Beff.shape[:-2], Beff.shape[-1]
 
         # %% Preprocessing
@@ -72,6 +88,17 @@ class BlochSim(Function):
     @staticmethod
     def backward(ctx: CTX, grad_Mo: Tensor
                  ) -> Tuple[Tensor, Tensor, None, None, None, None]:
+        """Backward evolution of Bloch simulation Jacobians
+
+        *INPUTS*
+        - `ctx` (1,) pytorch CTX cacheing object
+        - `grad_Mo` (N, *Nd, xyz), derivative w.r.t. output Magetic spins.
+        *OUTPUTS*
+        - `grad_Mi` (N, *Nd, xyz), derivative w.r.t. input Magetic spins.
+        - `grad_Beff` (N, *Nd, xyz, nT), derivative w.r.t. B-effective.
+        - None*4, this implemendation do not provide derivatives w.r.t.:
+          `T1`, `T2`, `γ`, and `dt`.
+        """
         # grads of configuration variables are not supported yet
         needs_grad = ctx.needs_input_grad
         grad_Beff = grad_Mi = grad_T1 = grad_T2 = grad_γ = grad_dt = None
@@ -171,7 +198,12 @@ def blochsim(
         Mi: Tensor, Beff: Tensor,
         T1: Optional[Tensor] = T1G, T2: Optional[Tensor] = T2G,
         γ: Tensor = γH, dt: Tensor = dt0) -> Tensor:
-    """
+    """Bloch simulator with explicit Jacobian operation.
+
+    Setting `T1=T2=None` to option for simulation ignoring relaxation.
+    Usage:
+        Mo = blochsim(Mi, Beff; T1, T2, γ, dt)
+        Mo = blochsim(Mi, Beff; T1=None, T2=None, γ, dt)
     *INPUTS*:
     - `Mi` (N, *Nd, xyz), Magnetic spins, assumed equilibrium [0 0 1]
     - `Beff` (N, *Nd, xyz, nT) "Gauss", B-effective, magnetic field.

@@ -16,8 +16,10 @@ else:
 
 
 def ctrsub(shape):
-    """
-        ctrsub(shape)
+    """Compute subscript indices to the center element of a regular grid
+
+    Usage:
+        csub = ctrsub(shape)
     Center index after fftshift, wrapped for consistent behaviours.
     *OUTPUTS*
     - `cSub`
@@ -27,9 +29,10 @@ def ctrsub(shape):
 
 def g2k(g: Tensor, isTx: bool,
         γ: Tensor = tensor([[γH]]), dt: Tensor = tensor([[dt0]])) -> Tensor:
-    """
-        g2k(g, isTx, γ=γ¹H, dt=dt0)
-    Compute k-space from gradient.
+    """Compute k-space from gradients.
+
+    Usage:
+        k = g2k(g, isTx; γ=γ¹H, dt=dt0)
 
     *INPUTS*:
     - `g` (N, xyz, nT) "Gauss/cm", gradient
@@ -50,7 +53,10 @@ def g2k(g: Tensor, isTx: bool,
 
 
 def g2s(g: Tensor, dt: Tensor = tensor([[dt0]])) -> Tensor:
-    """
+    """Compute slew rates from gradients.
+
+    Usage:
+        s = g2s(g; dt)
     *INPUTS*:
     - `g` (N, xyz, nT) "Gauss/cm", gradient
     *OPTIONALS*:
@@ -69,9 +75,10 @@ def g2s(g: Tensor, dt: Tensor = tensor([[dt0]])) -> Tensor:
 
 def k2g(k: Tensor, isTx: bool,
         γ: Tensor = tensor([[γH]]), dt: Tensor = tensor([[dt0]])) -> Tensor:
-    """
-        k2g(k, isTx, γ=γ¹H, dt=dt0)
-    Gradient, `g`, of `TxRx` k-space, (trasmit/receive, excitation/imaging).
+    """Compute k-space from gradients
+
+    Usage:
+        k = k2g(k, isTx; γ=γ¹H, dt=dt0)
 
     *INPUTS*:
     - `k` (N, xyz, nT) "cycle/cm", Tx or Rx k-space.
@@ -93,8 +100,10 @@ def k2g(k: Tensor, isTx: bool,
 
 
 def rf_c2r(rf: ndarrayA) -> ndarrayA:
-    """
-        rf_c2r(rf)
+    """Convert complex RF to real RF
+
+    Usage:
+        rf = rf_c2r(rf)
     *INPUTS*:
     - `rf` (N, 1, nT, (nCoils)) RF pulse, complex
     *OUTPUTS*:
@@ -110,8 +119,10 @@ def rf_c2r(rf: ndarrayA) -> ndarrayA:
 
 
 def rf_r2c(rf: ndarrayA) -> ndarrayA:
-    """
-        rf_r2c(rf)
+    """Convert real RF to complex RF
+
+    Usage:
+        rf = rf_r2c(rf)
     *INPUTS*:
     - `rf` (N, xy, nT, (nCoils)) RF pulse, x for real, y for imag.
     *OUTPUTS*:
@@ -124,8 +135,10 @@ def rf_r2c(rf: ndarrayA) -> ndarrayA:
 
 
 def rf2tρθ(rf: Tensor, rfmax: Tensor) -> Tuple[Tensor, Tensor]:
-    """
-        rf2tρθ(rf, rfmax)
+    """Convert real RF to tρ ≔ tan(ρ/ρ_max⋅π/2), and θ
+
+    Usage:
+        tρ, θ = rf2tρθ(rf, rfmax)
     *INPUTS*:
     - `rf` (N, xy, nT, (nCoils)) RF pulse, Gauss, x for real, y for imag.
     - `rfmax` (N, (nCoils)) RF pulse, Gauss, x for real, y for imag.
@@ -143,8 +156,10 @@ def rf2tρθ(rf: Tensor, rfmax: Tensor) -> Tuple[Tensor, Tensor]:
 
 
 def rfclamp(rf: Tensor, rfmax: Tensor, eps: Number = 1e-7) -> Tensor:
-    """
-        rfclamp(rf, rfmax)
+    """Clamp RF to rfmax
+
+    Usage:
+        rf = rfclamp(rf, rfmax)
     *INPUTS*:
     - `rf` (N, xy, nT, (nCoils)) RF pulse, Gauss, x for real, y for imag.
     - `rfmax` (N, (nCoils)) RF pulse, Gauss, x for real, y for imag.
@@ -162,9 +177,10 @@ def rfclamp(rf: Tensor, rfmax: Tensor, eps: Number = 1e-7) -> Tensor:
 
 
 def s2g(s: Tensor, dt: Tensor = tensor([[dt0]])) -> Tensor:
-    """
-        s2g(s, dt=dt0)
-    Compute gradient from slew rate.
+    """Compute gradients from slew rates.
+
+    Usage:
+        g = s2g(s, dt=dt0)
 
     *INPUTS*:
     - `s` (N, xyz, nT) "Gauss/cm/Sec", Slew rate.
@@ -181,8 +197,10 @@ def s2g(s: Tensor, dt: Tensor = tensor([[dt0]])) -> Tensor:
 
 
 def s2ts(s: Tensor, smax: Tensor) -> Tensor:
-    """
-        s2ts(s, smax)
+    """Convert slew rate to ts ≔ tan(s/s_max⋅π/2)
+
+    Usage:
+        ts = s2ts(s, smax)
     *INPUTS*:
     - `s` (N, xyz, nT) slew rate, Gauss/cm/Sec.
     - `smax` (N, xyz) max |slew rate|, Gauss/cm/Sec.
@@ -196,8 +214,10 @@ def s2ts(s: Tensor, smax: Tensor) -> Tensor:
 
 
 def sclamp(s: Tensor, smax: Tensor) -> Tensor:
-    """
-        sclamp(s, smax)
+    """Clamp slew rate to `smax`
+
+    Usage:
+        s = sclamp(s, smax)
     *INPUTS*:
     - `s` (N, xyz, nT) slew rate, Gauss/cm/Sec.
     - `smax` (N, xyz) max |slew rate|, Gauss/cm/Sec.
@@ -212,8 +232,10 @@ def sclamp(s: Tensor, smax: Tensor) -> Tensor:
 
 
 def ts2s(ts: Tensor, smax: Tensor) -> Tensor:
-    """
-        s2ts(s, smax)
+    """Convert ts ≔ tan(s/s_max⋅π/2) to slew rate
+
+    Usage:
+        s = ts2s(ts, smax)
     *INPUTS*:
     - `ts` (N, xyz, nT) tan(s/smax*π/2), (-∞, ∞)
     - `smax` (N, xyz) max |slew rate|, Gauss/cm/Sec.
@@ -227,8 +249,10 @@ def ts2s(ts: Tensor, smax: Tensor) -> Tensor:
 
 
 def tρθ2rf(tρ: Tensor, θ: Tensor, rfmax: Tensor) -> Tensor:
-    """
-        tρθ2rf(tρ, θ, rfmax)
+    """Convert tρ ≔ tan(ρ/ρ_max⋅π/2), and θ to real RF
+
+    Usage:
+        rf = tρθ2rf(tρ, θ, rfmax)
     *INPUTS*:
     - `tρ` (N, 1, nT, (nCoils)) tan(ρ/rfmax*π/2), [0, +∞).
     - `θ` (N, 1, nT, (nCoils)) RF phase, [-π/2, π/2].
@@ -245,7 +269,9 @@ def tρθ2rf(tρ: Tensor, θ: Tensor, rfmax: Tensor) -> Tensor:
 
 
 def uϕrot(U: Tensor, Φ: Tensor, Vi: Tensor):
-    """
+    """Rotate Vi about axis U by Φ
+
+    Usage:
         Vo = uϕrot(U, Φ, Vi)
     Apply axis-angle, `U-Phi` rotation on `V`. Rotation is broadcasted on `V`.
     <en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle>
