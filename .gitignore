@@ -10,6 +10,11 @@
 !*.md
 !*.py
 !*.pdf
+!*.rst
+
+# and specific files
+!docs/Makefile
+!docs/make.bat
 
 # even if in sub-dirs
 !*/
@@ -25,4 +30,4 @@
 *.vector_cache/
 *data/
 *prof/
-
+*build/

@@ -1,3 +1,6 @@
+r""" B-effective related functions
+"""
+
 import torch
 import torch.nn.functional as F
 from torch import tensor, Tensor
@@ -10,73 +13,24 @@ from mrphy import utils
 # - Faster init of AB in `beff2ab`
 
 
-def rfgr2beff(
-        rf: Tensor, gr: Tensor, loc: Tensor,
-        Δf: Optional[Tensor] = None, b1Map: Optional[Tensor] = None,
-        γ: Tensor = γH):
-    """Compute B-effectives from rf and gradients
-
-    Usage:
-        beff = rfgr2beff(rf, gr, loc, Δf, b1Map, γ)
-    *INPUTS*:
-    - `rf` (N,xy, nT,(nCoils)) "Gauss", `xy` for separating real and imag part.
-    - `gr` (N,xyz,nT) "Gauss/cm"
-    *OPTIONALS*:
-    - `loc`(N,*Nd,xyz) "cm", locations.
-    - `Δf` (N,*Nd,) "Hz", off-resonance.
-    - `b1Map` (N,*Nd,xy,nCoils) a.u., , transmit sensitivity.
-    - `γ`(N,1) "Hz/Gauss", gyro-ratio
-    *OUTPUTS*:
-    - `beff` (N,*Nd,xyz,nT) "Gauss"
-    """
-    assert(rf.device == gr.device == loc.device)
-    device = rf.device
-
-    shape = loc.shape
-    N, Nd, d = shape[0], shape[1:-1], loc.dim()-2
-
-    Bz = (loc.reshape(N, -1, 3) @ gr).reshape((N, *Nd, 1, -1))
-
-    if Δf is not None:  # Δf: -> (N, *Nd, 1, 1); 3 from 1(dim-N) + 2(dim-xtra)
-        γ = γ.to(device=device)
-        Δf, γ = map(lambda x: x.reshape(x.shape+(d+3-x.dim())*(1,)), (Δf, γ))
-        Bz += Δf/γ
-
-    # rf -> (N, *len(Nd)*(1,), xy, nT, (nCoils))
-    rf = rf.reshape((-1, *d*(1,))+rf.shape[1:])
-    # Real as `Bx`, Imag as `By`.
-    if b1Map is None:
-        if rf.dim() == Bz.dim()+1:  # (N, *len(Nd)*(1,), xy, nT, nCoils)
-            rf = torch.sum(rf, dim=-1)  # -> (N, *len(Nd)*(1,), xy, nT)
-
-        Bx, By = rf[..., 0:1, :].expand_as(Bz), rf[..., 1:2, :].expand_as(Bz)
-    else:
-        b1Map = b1Map.to(device)
-        b1Map = b1Map[..., None, :]  # -> (N, *Nd, xy, 1, nCoils)
-        Bx = torch.sum((b1Map[..., 0:1, :, :]*rf[..., 0:1, :, :]
-                        - b1Map[..., 1:2, :, :]*rf[..., 1:2, :, :]),
-                       dim=-1).expand_as(Bz)  # -> (N, *Nd, x, nT)
-        By = torch.sum((b1Map[..., 0:1, :, :]*rf[:, :, 1:2, ...]
-                        + b1Map[..., 1:2, :, :]*rf[:, :, 0:1, ...]),
-                       dim=-1).expand_as(Bz)  # -> (N, *Nd, y, nT)
-
-    beff = torch.cat([Bx, By, Bz], dim=-2)  # -> (N, *Nd, xyz, nT)
-    return beff
+__all__ = ['beff2ab', 'beff2uφ', 'rfgr2beff']
 
 
 def beff2uϕ(beff: Tensor, γ2πdt: Tensor, dim=-1):
-    """Compute rotation axes and angles from B-effectives
+    r"""Compute rotation axes and angles from B-effectives
 
     Usage:
-        U, Φ = beff2uϕ(beff, γ2πdt)
-    *INPUTS*:
-    - `beff` (N, *Nd, xyz) "Gauss", B-effective, magnetic field applied on `M`.
-    - `γ2πdt` (N, 1,) "Rad/Gauss", gyro ratio in radians, global.
-    *OPTIONALS*
-    - `dim` int. Indicate the `xyz`-dim, allow `beff.shape != (N, *Nd, xyz)`
-    *OUTPUTS*:
-    - `U` (N, *Nd, xyz), rotation axis
-    - `Φ` (N, *Nd), rotation angle
+        ``U, Φ = beff2uϕ(beff, γ2πdt)``
+    Inputs:
+        - ``beff``: `(N, *Nd, xyz)`, "Gauss", B-effective, magnetic field \
+          applied on `M`.
+        - ``γ2πdt``: `(N, 1,)`, "Rad/Gauss", gyro ratio in radians, global.
+    Optionals:
+        - ``dim``: int. Indicate the `xyz`-dim, allow \
+          `beff.shape != (N, *Nd, xyz)`
+    Outputs:
+        - ``U``: `(N, *Nd, xyz)`, rotation axis
+        - ``Φ``: `(N, *Nd)`, rotation angle
     """
     U = F.normalize(beff, dim=dim)
     Φ = -torch.norm(beff, dim=dim) * γ2πdt  # negate: BxM -> MxB
@@ -87,23 +41,23 @@ def beff2ab(
         beff: Tensor,
         E1: Optional[Tensor] = None, E2: Optional[Tensor] = None,
         γ: Optional[Tensor] = None, dt: Optional[Tensor] = None):
-    """Compute Hargreave's 𝐴/𝐵, mat/vec, from B-effectives
+    r"""Compute Hargreave's 𝐴/𝐵, mat/vec, from B-effectives
 
-    See: doi:10.1002/mrm.1170.
+    See: `doi:10.1002/mrm.1170 <https://doi.org/10.1002/mrm.1170>`_.
 
     Usage:
-        beff2ab(beff, T1=(Inf), T2=(Inf), γ=γ¹H, dt=(dt0))
+        ``A, B = beff2ab(beff, T1=(Inf), T2=(Inf), γ=γ¹H, dt=(dt0))``
 
-    *INPUTS*:
-    - `beff`: (N,*Nd,xyz,nT).
-    *OPTIONALS*:
-    - `T1` (N, *Nd,) "Sec", T1 relaxation.
-    - `T2` (N, *Nd,) "Sec", T2 relaxation.
-    - `γ`  (N, *Nd,) "Hz/Gauss", gyro ratio in Hertz.
-    - `dt` (N, 1, ) "Sec", dwell time.
-    *OUTPUTS*:
-    - `A` (N, *Nd, xyz, 3), `A[:,iM,:,:]` is the `iM`-th 𝐴.
-    - `B` (N, *Nd, xyz), `B[:,iM,:]` is the `iM`-th 𝐵.
+    Inputs:
+        - ``beff``: `(N,*Nd,xyz,nT)`, B-effective.
+    Optionals:
+        - ``T1``: `(N, *Nd,)`, "Sec", T1 relaxation.
+        - ``T2``: `(N, *Nd,)`, "Sec", T2 relaxation.
+        - ``γ``:  `(N, *Nd,)`, "Hz/Gauss", gyro ratio in Hertz.
+        - ``dt``: `(N, 1, )`, "Sec", dwell time.
+    Outputs:
+        - ``A``: `(N, *Nd, xyz, 3)`, `A[:,iM,:,:]`, is the `iM`-th 𝐴.
+        - ``B``: `(N, *Nd, xyz)`, `B[:,iM,:]`, is the `iM`-th 𝐵.
     """
     shape = beff.shape
     device, dtype, d = beff.device, beff.dtype, beff.dim()-2
@@ -149,3 +103,58 @@ def beff2ab(
     A, B = AB[..., 0:3], AB[..., 3]
 
     return A, B
+
+
+def rfgr2beff(
+        rf: Tensor, gr: Tensor, loc: Tensor,
+        Δf: Optional[Tensor] = None, b1Map: Optional[Tensor] = None,
+        γ: Tensor = γH):
+    r"""Compute B-effectives from rf and gradients
+
+    Usage:
+        ``beff = rfgr2beff(rf, gr, loc, Δf, b1Map, γ)``
+    Inputs:
+        - ``rf``: `(N,xy,nT,(nCoils))`, "Gauss", `xy` for separating real and \
+          imag part.
+        - ``gr``: `(N,xyz,nT)`, "Gauss/cm".
+    Optionals:
+        - ``loc``: `(N,*Nd,xyz)`, "cm", locations.
+        - ``Δf``: `(N,*Nd,)`, "Hz", off-resonance.
+        - ``b1Map``: `(N,*Nd,xy,nCoils)`, a.u., transmit sensitivity.
+        - ``γ``: `(N,1)`, "Hz/Gauss", gyro-ratio
+    Outputs:
+        - ``beff``: `(N,*Nd,xyz,nT)`, "Gauss"
+    """
+    assert(rf.device == gr.device == loc.device)
+    device = rf.device
+
+    shape = loc.shape
+    N, Nd, d = shape[0], shape[1:-1], loc.dim()-2
+
+    Bz = (loc.reshape(N, -1, 3) @ gr).reshape((N, *Nd, 1, -1))
+
+    if Δf is not None:  # Δf: -> (N, *Nd, 1, 1); 3 from 1(dim-N) + 2(dim-xtra)
+        γ = γ.to(device=device)
+        Δf, γ = map(lambda x: x.reshape(x.shape+(d+3-x.dim())*(1,)), (Δf, γ))
+        Bz += Δf/γ
+
+    # rf -> (N, *len(Nd)*(1,), xy, nT, (nCoils))
+    rf = rf.reshape((-1, *d*(1,))+rf.shape[1:])
+    # Real as `Bx`, Imag as `By`.
+    if b1Map is None:
+        if rf.dim() == Bz.dim()+1:  # (N, *len(Nd)*(1,), xy, nT, nCoils)
+            rf = torch.sum(rf, dim=-1)  # -> (N, *len(Nd)*(1,), xy, nT)
+
+        Bx, By = rf[..., 0:1, :].expand_as(Bz), rf[..., 1:2, :].expand_as(Bz)
+    else:
+        b1Map = b1Map.to(device)
+        b1Map = b1Map[..., None, :]  # -> (N, *Nd, xy, 1, nCoils)
+        Bx = torch.sum((b1Map[..., 0:1, :, :]*rf[..., 0:1, :, :]
+                        - b1Map[..., 1:2, :, :]*rf[..., 1:2, :, :]),
+                       dim=-1).expand_as(Bz)  # -> (N, *Nd, x, nT)
+        By = torch.sum((b1Map[..., 0:1, :, :]*rf[:, :, 1:2, ...]
+                        + b1Map[..., 1:2, :, :]*rf[:, :, 0:1, ...]),
+                       dim=-1).expand_as(Bz)  # -> (N, *Nd, y, nT)
+
+    beff = torch.cat([Bx, By, Bz], dim=-2)  # -> (N, *Nd, xyz, nT)
+    return beff
