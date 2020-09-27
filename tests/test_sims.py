@@ -14,12 +14,12 @@ class Test_sims:
     # device = torch.device('cpu')
     # dtype, atol = torch.float32, 1e-4
     dtype, atol = torch.float64, 1e-9
-    print(device)
 
     dkw = {'dtype': dtype, 'device': device}
 
-    γ = tensor([[γH]], device=device, dtype=dtype)  # Hz/Gauss
-    dt = tensor([[dt0]], device=device, dtype=dtype)   # Sec
+    print(device)
+    γ = γH.to(**dkw)  # Hz/Gauss
+    dt = dt0.to(**dkw)   # Sec
 
     def test_blochsims(self):
         """
@@ -97,14 +97,10 @@ class Test_sims:
 
         # %% sim w/o relaxations
         print('\nblochsim tests (no relaxations):')
-        t = time.time()
         Mo_1b = slowsims.blochsim(M0, beff, T1=None, T2=None, γ=γ, dt=dt)
-        print('forward: slowsims.blochsim', time.time() - t)
 
         res1b = torch.sum(Mo_1b)
-        t = time.time()
         res1b.backward()  # keep graph to check `bar.backward()`
-        print('backward: slowsims.blochsim', time.time() - t)
         grad_M0_1b = M0.grad.clone().cpu().numpy()
         grad_beff_1b = beff.grad.clone().cpu().numpy()
 

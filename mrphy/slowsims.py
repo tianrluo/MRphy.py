@@ -24,15 +24,15 @@ def blochsim_1step(
         ``M = blochsim_1step(M, M1, b, E1, E1_1, E2, γ2πdt)``
     Inputs:
         - ``M``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium \
-          magnitude [0 0 1]
+          [[[0 0 1]]].
         - ``M1``: `(N, *Nd, xyz)`, pre-allocated variable for `uϕrot` output.
         - ``b``: `(N, *Nd, xyz)`, "Gauss", B-effective, magnetic field applied.
-        - ``E1``: `(N, 1,)`, a.u., T1 reciprocal exponential, global.
-        - ``E1_1``: `(N, 1,)`, a.u., T1 reciprocal exponential subtracted by \
-          ``1``, global.
-        - ``E2``: `(N, 1,)`, a.u., T2 reciprocal exponential, global.
-        - ``γ2πdt``: `(N, 1,)`, "rad/Gauss", gyro ratio mutiplied by `dt`, \
-          global.
+        - ``E1``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, a.u., T1 reciprocal exponential.
+        - ``E1_1``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, a.u., T1 reciprocal \
+          exponential subtracted by ``1``.
+        - ``E2``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, a.u., T2 reciprocal exponential.
+        - ``γ2πdt``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "rad/Gauss", gyro ratio \
+          in radiance mutiplied by `dt`.
     Outputs:
         - ``M``: `(N, *Nd, xyz)`, Magetic spins after simulation.
     """
@@ -54,7 +54,7 @@ def blochsim_1step(
 def blochsim(
         M: Tensor, Beff: Tensor,
         T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
-        γ: Optional[Tensor] = None, dt: Optional[Tensor] = None):
+        γ: Tensor = γH, dt: Tensor = dt0):
     r"""Bloch simulator with implicit Jacobian operations.
 
     Usage:
@@ -62,14 +62,13 @@ def blochsim(
         ``Mo = blochsim(Mi, Beff; T1=None, T2=None, γ, dt)``
     Inputs:
         - ``M``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium \
-          magnitude [0 0 1]
-        - ``Beff``: `(N, *Nd, xyz, nT)`, "Gauss", B-effective, magnetic field \
-          applied.
+          [[[0 0 1]]].
+        - ``Beff``: `(N, *Nd, xyz, nT)`, "Gauss", B-effective, magnetic field.
     OPTIONALS:
-        - ``T1``: `(N, *Nd,)`, "Sec", T1 relaxation.
-        - ``T2``: `(N, *Nd,)`, "Sec", T2 relaxation.
-        - ``γ``:  `(N, *Nd,)`, "Hz/Gauss", gyro ratio in Hertz.
-        - ``dt``: `(N, 1, )`, "Sec", dwell time.
+        - ``T1``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T1 relaxation.
+        - ``T2``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T2 relaxation.
+        - ``γ``:  `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Hz/Gauss", gyro ratio.
+        - ``dt``: `()` ⊻ `(N ⊻ 1,)`, "Sec", dwell time.
     Outputs:
         - ``M``: `(N, *Nd, xyz)`, Magetic spins after simulation.
 
@@ -77,19 +76,17 @@ def blochsim(
         spin history during simulations is not provided.
     """
     assert(M.shape[:-1] == Beff.shape[:-2])
-    device, dtype, d = M.device, M.dtype, M.dim()-1
+    device, dtype, ndim = M.device, M.dtype, M.ndim-1
 
     # defaults and move to the same device
-    Beff = Beff.to(device)
     dkw = {'device': device, 'dtype': dtype}
-    dt = tensor(dt0, **dkw) if (dt0 is None) else dt.to(device)
-    γ = tensor(γH, **dkw) if (γ is None) else γ.to(device)
     E1 = tensor(1, **dkw) if (T1 is None) else torch.exp(-dt/T1.to(device))
     E2 = tensor(1, **dkw) if (T2 is None) else torch.exp(-dt/T2.to(device))
+    Beff, γ, dt = (x.to(device) for x in (Beff, γ, dt))
 
     # preprocessing
-    E1, E2, γ, dt = map(lambda x: x.reshape(x.shape+(d-x.dim())*(1,)),
-                        (E1, E2, γ, dt))  # broadcastable w/ (N, *Nd)
+    E1, E2, γ, dt = map(lambda x: x.reshape(x.shape+(ndim-x.ndim)*(1,)),
+                        (E1, E2, γ, dt))  # (N, *Nd) compatible
 
     E1_1, E2, γ2πdt = E1 - 1, E2[..., None], 2*π*γ*dt  # Hz/Gs -> Rad/Gs
 
