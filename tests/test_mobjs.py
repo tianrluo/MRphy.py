@@ -109,6 +109,45 @@ class Test_mobjs:
 
         return
 
+    def test_PulseInterpT(self):
+        dkw, atol = self.dkw, self.atol
+        γ, dt = self.γ, dt0  # For test coverage, not using self.dt here.
+        dt_n = dt*5
+
+        nT, axis = 11, 2
+        kind = 'linear'
+        pulse_size = (1, 1, nT)
+
+        kw = {'num':nT, 'axis':axis}
+
+        f_0 = lambda x: np.dstack((np.zeros_like(x[:,:,[0]]), x))  # noqa: E731
+
+        # numpy raw data
+        rf = 0.1*np.concatenate([np.linspace([[0.]], 1., **kw),
+                                 np.linspace([[1]], 0., **kw)], 1)
+
+        gr = 0.1*np.concatenate([np.linspace([[0.]], 1., **kw),
+                                 np.linspace([[1.]], 0., **kw),
+                                 np.ones(pulse_size)], 1)
+
+        rf_pt, gr_pt = tensor(rf, **dkw), tensor(gr, **dkw)
+
+        p_old = mobjs.Pulse(rf=rf_pt, gr=gr_pt, dt=dt, **dkw)
+        p_new = p_old.interpT(dt=dt_n, kind=kind)
+
+        # reference
+        rf_ref = pytest.approx(np.array([[[0.04, 0.09],
+                                          [0.06, 0.01]]]), abs=atol)
+
+        gr_ref = pytest.approx(np.array([[[0.04, 0.09],
+                                          [0.06, 0.01],
+                                          [0.1,   0.1]]]), abs=atol)
+
+        assert(self.np(p_new.rf) == rf_ref)
+        assert(self.np(p_new.gr) == gr_ref)
+
+        return
+
 
 if __name__ == '__main__':
     tmp = Test_mobjs()

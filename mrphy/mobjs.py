@@ -1,10 +1,12 @@
 r"""Classes for MRI excitation simulations
 """
+import copy
+from typing import TypeVar, Optional
 
 import numpy as np
+from scipy import interpolate
 import torch
 from torch import tensor, Tensor
-from typing import TypeVar, Optional
 
 from mrphy import γH, dt0, gmax0, smax0, rfmax0, T1G, T2G, π
 from mrphy import utils, beffective, sims
@@ -19,6 +21,9 @@ SpinArray = TypeVar('SpinArray', bound='SpinArray')
 SpinCube = TypeVar('SpinCube', bound='SpinCube')
 
 
+__all__ = ['Pulse', 'SpinArray', 'SpinCube', 'Examples']
+
+
 class Pulse(object):
     r"""Pulse object of RF and GR
 
@@ -29,8 +34,7 @@ class Pulse(object):
         - ``rf``: `(N,xy, nT,(nCoils))` "Gauss", ``xy`` for separating real \
           and imag part.
         - ``gr``: `(N,xyz,nT)`, "Gauss/cm"
-        - ``dt``: `(N,1,)`, "Sec" simulation temporal step size, i.e., dwell \
-          time.
+        - ``dt``: `(N,1,)`, "Sec" simulation temporal step size, dwell time.
         - ``gmax``: `(N, xyz ⊻ 1)`, "Gauss/cm", max \|gradient\|.
         - ``smax``: `(N, xyz ⊻ 1)`, "Gauss/cm/Sec", max \|slew rate\|.
         - ``rfmax``: `(N,(nCoils))`, "Gauss", max \|RF\|.
@@ -158,6 +162,50 @@ class Pulse(object):
 
         return beffective.rfgr2beff(self.rf, self.gr, loc,
                                     Δf=Δf, b1Map=b1Map, γ=γ)
+
+    def interpT(self, dt: Tensor, kind: str = 'linear') -> Pulse:
+        r""" Interpolate pulse of `dt` by `kind`.
+
+        Usage:
+            ``new_pulse = pulse.interpT(dt; kind)``
+        Inputs:
+            - ``dt``: `(N,1)`, "Sec" simulation temporal step size, dwell time.
+            - ``kind``: str, passed to scipy.interpolate.interp1d.
+        Outputs:
+            - ``new_pulse``: mrphy.mobjs.Pulse object.
+
+        .. note::
+            This method requires both `dt` and `self.dt` to be unique/global.
+        """
+        assert(self.dt.numel() == dt.numel() == 1)
+
+        if dt.to(self.device) == self.dt:
+            return copy.deepcopy(self)
+
+        axis = 2  # Along temporal dimension
+        dkw = {'device': self.device, 'dtype': self.dtype}
+        kw = {'axis':axis, 'kind':kind, 'copy':False, 'assume_sorted':True}
+
+        f_np = lambda x: x.detach().cpu().numpy()  # noqa: E731
+        f_0 = lambda x: np.dstack((np.zeros_like(x[:,:,[0]]), x))  # noqa: E731
+
+        # convert to np array, then prepend 0's.
+        rf_np, gr_np = f_0(f_np(self.rf)), f_0(f_np(self.gr))
+
+        dt_o_np, dt_n_np = f_np(self.dt.flatten()), f_np(dt.flatten())
+
+        nT = rf_np.shape[axis]
+
+        t_o = np.arange(0, nT)*dt_o_np  # (nT,)
+        t_n = np.arange(1, t_o[-1]//dt_n_np + 1)*dt_n_np
+
+        f_rf = interpolate.interp1d(t_o, rf_np, **kw)
+        f_gr = interpolate.interp1d(t_o, gr_np, **kw)
+
+        rf_n, gr_n = tensor(f_rf(t_n), **dkw), tensor(f_gr(t_n), **dkw)
+
+        desc = self.desc + ' interpT\'ed: dt = ' + str(dt_n_np[0])
+        return Pulse(rf_n, gr_n, dt=dt, desc=desc, **dkw)
 
     def to(self, device: torch.device = torch.device('cpu'),
            dtype: torch.dtype = torch.float32) -> Pulse:

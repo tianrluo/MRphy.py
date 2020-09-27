@@ -5,6 +5,7 @@ on:
     branches: 
       - master
       - dev
+  workflow_dispatch:
 
 jobs:
   build:
@@ -23,18 +24,19 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Build Doc with Sphinx
       run: |
+        pip install .
         pip install -U sphinx sphinx-rtd-theme
         sphinx-build -b html ./docs/source ./docs/build
     - name: Deploy Dev Doc
       if: ${{github.ref == 'refs/heads/dev'}}
-      uses: peaceiris/actions-gh-pages@v3.7.0-8
+      uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{secrets.GITHUB_TOKEN}}
         publish_dir: ./docs/build
         destination_dir: dev
     - name: Deploy Stable Doc
       if: ${{github.ref == 'refs/heads/master'}}
-      uses: peaceiris/actions-gh-pages@v3.7.0-8
+      uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{secrets.GITHUB_TOKEN}}
         publish_dir: ./docs/build
