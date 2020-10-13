@@ -155,8 +155,43 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="mrphy-sims">
-<h1>mrphy.sims<a class="headerlink" href="#mrphy-sims" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="module-mrphy.sims">
+<span id="mrphy-sims"></span><h1>mrphy.sims<a class="headerlink" href="#module-mrphy.sims" title="Permalink to this headline">¶</a></h1>
+<p>Simulation codes with explicit Jacobian operations.</p>
+<dl class="py function">
+<dt id="mrphy.sims.blochsim">
+<code class="sig-prename descclassname">mrphy.sims.</code><code class="sig-name descname">blochsim</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">Mi</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">Beff</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">T1</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">tensor(1.47, dtype=torch.float64)</span></em>, <em class="sig-param"><span class="n">T2</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">tensor(0.07, dtype=torch.float64)</span></em>, <em class="sig-param"><span class="n">γ</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor(4257.6, dtype=torch.float64)</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor(4e-06, dtype=torch.float64)</span></em><span class="sig-paren">)</span> &#x2192; torch.Tensor<a class="headerlink" href="#mrphy.sims.blochsim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bloch simulator with explicit Jacobian operation.</p>
+<p>Setting <cite>T1=T2=None</cite> to opt for simulation ignoring relaxation.</p>
+<dl class="simple">
+<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">Mo</span> <span class="pre">=</span> <span class="pre">blochsim(Mi,</span> <span class="pre">Beff;</span> <span class="pre">T1,</span> <span class="pre">T2,</span> <span class="pre">γ,</span> <span class="pre">dt)</span></code>
+<code class="docutils literal notranslate"><span class="pre">Mo</span> <span class="pre">=</span> <span class="pre">blochsim(Mi,</span> <span class="pre">Beff;</span> <span class="pre">T1=None,</span> <span class="pre">T2=None,</span> <span class="pre">γ,</span> <span class="pre">dt)</span></code></p>
+</dd>
+<dt>Inputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Mi</span></code>: <cite>(N, *Nd, xyz)</cite>, Magnetic spins, assumed equilibrium [0 0 1]</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Beff</span></code>: <cite>(N, *Nd, xyz, nT)</cite>, “Gauss”, B-effective, magnetic field.</p></li>
+</ul>
+</dd>
+<dt>Optionals:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">T1</span></code>: <cite>(N, *Nd,)</cite>, “Sec”, T1 relaxation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">T2</span></code>: <cite>(N, *Nd,)</cite>, “Sec”, T2 relaxation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">γ</span></code>:  <cite>(N, *Nd,)</cite>, “Hz/Gauss”, gyro ratio in Hertz.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>(N, 1, )</cite>, “Sec”, dwell time.</p></li>
+</ul>
+</dd>
+<dt>Outputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Mo</span></code>: <cite>(N, *Nd, xyz)</cite>, Magetic spins after simulation.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>For alternative implementation:
+Storing history for <cite>U</cite>, <cite>Φ</cite> and <cite>UtM0</cite> etc., which are also used in
+<cite>backward</cite>, may avoid redundant computation, but comsumes more RAM.</p>
+</div>
+</dd></dl>
+
 </div>
 
 

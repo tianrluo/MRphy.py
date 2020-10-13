@@ -84,7 +84,15 @@
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">mrphy.__init__</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">mrphy.__init__</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#about-mrphy-py">About MRphy.py:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#general-comments">General Comments:</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#variable-naming-convention">Variable naming convention:</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#special-keywords-used-in-documentations">Special keywords used in documentations:</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">mrphy.utils</a></li>
 <li class="toctree-l1"><a class="reference internal" href="beffective.html">mrphy.beffective</a></li>
 <li class="toctree-l1"><a class="reference internal" href="sims.html">mrphy.sims</a></li>
@@ -155,8 +163,53 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="mrphy-init">
-<h1>mrphy.__init__<a class="headerlink" href="#mrphy-init" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="module-mrphy">
+<span id="mrphy-init"></span><h1>mrphy.__init__<a class="headerlink" href="#module-mrphy" title="Permalink to this headline">¶</a></h1>
+<p>A MRI excitation physics module.</p>
+<div class="section" id="about-mrphy-py">
+<h2>About MRphy.py:<a class="headerlink" href="#about-mrphy-py" title="Permalink to this headline">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">MRphy.py</span></code> provides the following constant and submodules:</p>
+<p>Constant:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">γH</span></code>: water proton gyro frequency, “4257.6 Hz/Gauss”.</p></li>
+</ul>
+</div></blockquote>
+<p>Submodules:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><a class="reference internal" href="utils.html#module-mrphy.utils" title="mrphy.utils"><code class="xref py py-mod docutils literal notranslate"><span class="pre">utils</span></code></a></p></li>
+<li><p><a class="reference internal" href="beffective.html#module-mrphy.beffective" title="mrphy.beffective"><code class="xref py py-mod docutils literal notranslate"><span class="pre">beffective</span></code></a></p></li>
+<li><p><a class="reference internal" href="sims.html#module-mrphy.sims" title="mrphy.sims"><code class="xref py py-mod docutils literal notranslate"><span class="pre">sims</span></code></a></p></li>
+<li><p><a class="reference internal" href="slowsims.html#module-mrphy.slowsims" title="mrphy.slowsims"><code class="xref py py-mod docutils literal notranslate"><span class="pre">slowsims</span></code></a></p></li>
+<li><p><a class="reference internal" href="mobjs.html#module-mrphy.mobjs" title="mrphy.mobjs"><code class="xref py py-mod docutils literal notranslate"><span class="pre">mobjs</span></code></a></p></li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="general-comments">
+<h2>General Comments:<a class="headerlink" href="#general-comments" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="variable-naming-convention">
+<h3>Variable naming convention:<a class="headerlink" href="#variable-naming-convention" title="Permalink to this headline">¶</a></h3>
+<p>A trailing <code class="docutils literal notranslate"><span class="pre">_</span></code> in a variable/attribute name indicates compactness, i.e.
+instead of size <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">*Nd,</span> <span class="pre">...)</span></code>, the variable/attributes size
+<code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">nM,</span> <span class="pre">...)</span></code>.
+For instance:
+A field map variable <code class="docutils literal notranslate"><span class="pre">b0map</span></code> may be of size <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">nx,</span> <span class="pre">ny,</span> <span class="pre">nz)</span></code>, while its
+compact countarpart <code class="docutils literal notranslate"><span class="pre">b0map_</span></code> has a size of <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">nM)</span></code>.</p>
+</div>
+<div class="section" id="special-keywords-used-in-documentations">
+<h3>Special keywords used in documentations:<a class="headerlink" href="#special-keywords-used-in-documentations" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">N</span></code>:   batch size</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nM</span></code>:  the number of spins</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Nd</span></code>:  A int-tuple for array size, e.g.: <code class="docutils literal notranslate"><span class="pre">Nd</span> <span class="pre">=</span> <span class="pre">(nx,</span> <span class="pre">(ny,</span> <span class="pre">(nz)))</span></code>. In python convention, <code class="docutils literal notranslate"><span class="pre">*</span></code> unpacks a tuple. Therefore, <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">*Nd)</span> <span class="pre">===</span> <span class="pre">(N,</span> <span class="pre">nx,</span> <span class="pre">ny,</span> <span class="pre">nz)</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nT</span></code>:  the number of time points</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xy</span></code>:  the dimension has length of <code class="docutils literal notranslate"><span class="pre">2</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">xyz</span></code>: the dimension has length of <code class="docutils literal notranslate"><span class="pre">3</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">⊻</span></code>: <strong>Either or</strong>. When used in enumerating function keywords arguments, it means the function accepts at most one of the keywords in a set as an input, e.g., <code class="docutils literal notranslate"><span class="pre">b0map</span> <span class="pre">⊻</span> <span class="pre">b0map_</span></code> means accepting either <code class="docutils literal notranslate"><span class="pre">b0map</span></code> or <code class="docutils literal notranslate"><span class="pre">b0map_</span></code>. When used in specifying variable dimensions, it means the dimension tuple can be one of the size tuple set, e.g. <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">nM</span> <span class="pre">⊻</span> <span class="pre">*Nd,</span> <span class="pre">xyz)</span></code> means accepting dimension either <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">nM,</span> <span class="pre">xyz)</span></code> or <code class="docutils literal notranslate"><span class="pre">(N,</span> <span class="pre">*Nd,</span> <span class="pre">xyz)</span></code>.</p></li>
+</ul>
+</div>
+</div>
 </div>
 
 

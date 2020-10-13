@@ -155,8 +155,86 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="mrphy-beffective">
-<h1>mrphy.beffective<a class="headerlink" href="#mrphy-beffective" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="module-mrphy.beffective">
+<span id="mrphy-beffective"></span><h1>mrphy.beffective<a class="headerlink" href="#module-mrphy.beffective" title="Permalink to this headline">¶</a></h1>
+<p>B-effective related functions</p>
+<dl class="py function">
+<dt id="mrphy.beffective.beff2ab">
+<code class="sig-prename descclassname">mrphy.beffective.</code><code class="sig-name descname">beff2ab</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">beff</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">E1</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">E2</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">γ</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.beffective.beff2ab" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute Hargreave’s 𝐴/𝐵, mat/vec, from B-effectives</p>
+<p>See: <a class="reference external" href="https://doi.org/10.1002/mrm.1170">doi:10.1002/mrm.1170</a>.</p>
+<dl class="simple">
+<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">A,</span> <span class="pre">B</span> <span class="pre">=</span> <span class="pre">beff2ab(beff,</span> <span class="pre">T1=(Inf),</span> <span class="pre">T2=(Inf),</span> <span class="pre">γ=γ¹H,</span> <span class="pre">dt=(dt0))</span></code></p>
+</dd>
+<dt>Inputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">beff</span></code>: <cite>(N,*Nd,xyz,nT)</cite>, B-effective.</p></li>
+</ul>
+</dd>
+<dt>Optionals:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">T1</span></code>: <cite>(N, *Nd,)</cite>, “Sec”, T1 relaxation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">T2</span></code>: <cite>(N, *Nd,)</cite>, “Sec”, T2 relaxation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">γ</span></code>:  <cite>(N, *Nd,)</cite>, “Hz/Gauss”, gyro ratio in Hertz.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>(N, 1, )</cite>, “Sec”, dwell time.</p></li>
+</ul>
+</dd>
+<dt>Outputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">A</span></code>: <cite>(N, *Nd, xyz, 3)</cite>, <cite>A[:,iM,:,:]</cite>, is the <cite>iM</cite>-th 𝐴.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">B</span></code>: <cite>(N, *Nd, xyz)</cite>, <cite>B[:,iM,:]</cite>, is the <cite>iM</cite>-th 𝐵.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mrphy.beffective.beff2u">
+<span id="mrphy.beffective.beff2uφ"></span><code class="sig-prename descclassname">mrphy.beffective.</code><code class="sig-name descname">beff2uφ</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">beff</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">γ2πdt</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">dim</span><span class="o">=</span><span class="default_value">- 1</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.beffective.beff2u" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute rotation axes and angles from B-effectives</p>
+<dl class="simple">
+<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">U,</span> <span class="pre">Φ</span> <span class="pre">=</span> <span class="pre">beff2uϕ(beff,</span> <span class="pre">γ2πdt)</span></code></p>
+</dd>
+<dt>Inputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">beff</span></code>: <cite>(N, *Nd, xyz)</cite>, “Gauss”, B-effective, magnetic field applied on <cite>M</cite>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">γ2πdt</span></code>: <cite>(N, 1,)</cite>, “Rad/Gauss”, gyro ratio in radians, global.</p></li>
+</ul>
+</dd>
+<dt>Optionals:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">dim</span></code>: int. Indicate the <cite>xyz</cite>-dim, allow <cite>beff.shape != (N, *Nd, xyz)</cite></p></li>
+</ul>
+</dd>
+<dt>Outputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">U</span></code>: <cite>(N, *Nd, xyz)</cite>, rotation axis</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Φ</span></code>: <cite>(N, *Nd)</cite>, rotation angle</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mrphy.beffective.rfgr2beff">
+<code class="sig-prename descclassname">mrphy.beffective.</code><code class="sig-name descname">rfgr2beff</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">rf</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">gr</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">loc</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">Δf</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">b1Map</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">γ</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor(4257.6, dtype=torch.float64)</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.beffective.rfgr2beff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute B-effectives from rf and gradients</p>
+<dl class="simple">
+<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">beff</span> <span class="pre">=</span> <span class="pre">rfgr2beff(rf,</span> <span class="pre">gr,</span> <span class="pre">loc,</span> <span class="pre">Δf,</span> <span class="pre">b1Map,</span> <span class="pre">γ)</span></code></p>
+</dd>
+<dt>Inputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">rf</span></code>: <cite>(N,xy,nT,(nCoils))</cite>, “Gauss”, <cite>xy</cite> for separating real and imag part.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gr</span></code>: <cite>(N,xyz,nT)</cite>, “Gauss/cm”.</p></li>
+</ul>
+</dd>
+<dt>Optionals:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">loc</span></code>: <cite>(N,*Nd,xyz)</cite>, “cm”, locations.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Δf</span></code>: <cite>(N,*Nd,)</cite>, “Hz”, off-resonance.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">b1Map</span></code>: <cite>(N,*Nd,xy,nCoils)</cite>, a.u., transmit sensitivity.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">γ</span></code>: <cite>(N,1)</cite>, “Hz/Gauss”, gyro-ratio</p></li>
+</ul>
+</dd>
+<dt>Outputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">beff</span></code>: <cite>(N,*Nd,xyz,nT)</cite>, “Gauss”</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </div>
 
 

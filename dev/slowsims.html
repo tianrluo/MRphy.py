@@ -155,8 +155,84 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="mrphy-slowsims">
-<h1>mrphy.slowsims<a class="headerlink" href="#mrphy-slowsims" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="module-mrphy.slowsims">
+<span id="mrphy-slowsims"></span><h1>mrphy.slowsims<a class="headerlink" href="#module-mrphy.slowsims" title="Permalink to this headline">¶</a></h1>
+<p>Simulation codes with implicit Jacobian operations.</p>
+<dl class="py function">
+<dt id="mrphy.slowsims.blochsim">
+<code class="sig-prename descclassname">mrphy.slowsims.</code><code class="sig-name descname">blochsim</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">M</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">Beff</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">T1</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">T2</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">γ</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.slowsims.blochsim" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bloch simulator with implicit Jacobian operations.</p>
+<dl class="simple">
+<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">Mo</span> <span class="pre">=</span> <span class="pre">blochsim(Mi,</span> <span class="pre">Beff;</span> <span class="pre">T1,</span> <span class="pre">T2,</span> <span class="pre">γ,</span> <span class="pre">dt)</span></code>
+<code class="docutils literal notranslate"><span class="pre">Mo</span> <span class="pre">=</span> <span class="pre">blochsim(Mi,</span> <span class="pre">Beff;</span> <span class="pre">T1=None,</span> <span class="pre">T2=None,</span> <span class="pre">γ,</span> <span class="pre">dt)</span></code></p>
+</dd>
+<dt>Inputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: <cite>(N, *Nd, xyz)</cite>, Magnetic spins, assumed equilibrium magnitude [0 0 1]</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Beff</span></code>: <cite>(N, *Nd, xyz, nT)</cite>, “Gauss”, B-effective, magnetic field applied.</p></li>
+</ul>
+</dd>
+<dt>OPTIONALS:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">T1</span></code>: <cite>(N, *Nd,)</cite>, “Sec”, T1 relaxation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">T2</span></code>: <cite>(N, *Nd,)</cite>, “Sec”, T2 relaxation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">γ</span></code>:  <cite>(N, *Nd,)</cite>, “Hz/Gauss”, gyro ratio in Hertz.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>(N, 1, )</cite>, “Sec”, dwell time.</p></li>
+</ul>
+</dd>
+<dt>Outputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: <cite>(N, *Nd, xyz)</cite>, Magetic spins after simulation.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>spin history during simulations is not provided.</p>
+</div>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mrphy.slowsims.blochsim_1step">
+<code class="sig-prename descclassname">mrphy.slowsims.</code><code class="sig-name descname">blochsim_1step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">M</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">M1</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">b</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">E1</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">E1_1</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">E2</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">γ2πdt</span><span class="p">:</span> <span class="n">torch.Tensor</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.slowsims.blochsim_1step" title="Permalink to this definition">¶</a></dt>
+<dd><p>Single step bloch simulation</p>
+<dl class="simple">
+<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">blochsim_1step(M,</span> <span class="pre">M1,</span> <span class="pre">b,</span> <span class="pre">E1,</span> <span class="pre">E1_1,</span> <span class="pre">E2,</span> <span class="pre">γ2πdt)</span></code></p>
+</dd>
+<dt>Inputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: <cite>(N, *Nd, xyz)</cite>, Magnetic spins, assumed equilibrium magnitude [0 0 1]</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">M1</span></code>: <cite>(N, *Nd, xyz)</cite>, pre-allocated variable for <cite>uϕrot</cite> output.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">b</span></code>: <cite>(N, *Nd, xyz)</cite>, “Gauss”, B-effective, magnetic field applied.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">E1</span></code>: <cite>(N, 1,)</cite>, a.u., T1 reciprocal exponential, global.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">E1_1</span></code>: <cite>(N, 1,)</cite>, a.u., T1 reciprocal exponential subtracted by <code class="docutils literal notranslate"><span class="pre">1</span></code>, global.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">E2</span></code>: <cite>(N, 1,)</cite>, a.u., T2 reciprocal exponential, global.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">γ2πdt</span></code>: <cite>(N, 1,)</cite>, “rad/Gauss”, gyro ratio mutiplied by <cite>dt</cite>, global.</p></li>
+</ul>
+</dd>
+<dt>Outputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: <cite>(N, *Nd, xyz)</cite>, Magetic spins after simulation.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="mrphy.slowsims.blochsim_ab">
+<code class="sig-prename descclassname">mrphy.slowsims.</code><code class="sig-name descname">blochsim_ab</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">M</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">A</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">B</span><span class="p">:</span> <span class="n">torch.Tensor</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.slowsims.blochsim_ab" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bloch simulation via Hargreave’s mat/vec representation</p>
+<dl class="simple">
+<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">blochsim_ab(M,</span> <span class="pre">A,</span> <span class="pre">B)</span></code></p>
+</dd>
+<dt>Inputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: <cite>(N, *Nd, xyz)</cite>, Magnetic spins, assumed equilibrium magnitude [0 0 1]</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">A</span></code>: <cite>(N, *Nd, xyz, 3)</cite>, <code class="docutils literal notranslate"><span class="pre">A[:,iM,:,:]</span></code> is the <cite>iM</cite>-th 𝐴.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">B</span></code>: <cite>(N, *Nd, xyz)</cite>, <code class="docutils literal notranslate"><span class="pre">B[:,iM,:]</span></code> is the <cite>iM</cite>-th 𝐵.</p></li>
+</ul>
+</dd>
+<dt>Outputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: <cite>(N, *Nd, xyz)</cite>, Result magnetic spins</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </div>
 
 
