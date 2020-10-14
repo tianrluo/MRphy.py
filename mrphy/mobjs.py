@@ -34,10 +34,11 @@ class Pulse(object):
         - ``rf``: `(N,xy, nT,(nCoils))` "Gauss", ``xy`` for separating real \
           and imag part.
         - ``gr``: `(N,xyz,nT)`, "Gauss/cm"
-        - ``dt``: `(N,1,)`, "Sec" simulation temporal step size, dwell time.
-        - ``gmax``: `(N, xyz ⊻ 1)`, "Gauss/cm", max \|gradient\|.
-        - ``smax``: `(N, xyz ⊻ 1)`, "Gauss/cm/Sec", max \|slew rate\|.
-        - ``rfmax``: `(N,(nCoils))`, "Gauss", max \|RF\|.
+        - ``dt``: `()` ⊻ `(N ⊻ 1,)`, "Sec", dwell time.
+        - ``gmax``: `()` ⊻ `(N ⊻ 1, xyz ⊻ 1)`, "Gauss/cm", max \|gradient\|.
+        - ``smax``: `()` ⊻ `(N ⊻ 1, xyz ⊻ 1)`, "Gauss/cm/Sec", max \
+          \|slew rate\|.
+        - ``rfmax``: `()` ⊻ `(N ⊻ 1,(nCoils))`, "Gauss", max \|RF\|.
         - ``desc``: str, an description of the pulse to be constructed.
         - ``device``: torch.device.
         - ``dtype``: torch.dtype.
@@ -47,14 +48,13 @@ class Pulse(object):
         - ``dtype``
         - ``is_cuda``
         - ``shape``: ``(N,1,nT)``
-        - ``gmax``: `(N, xyz ⊻ 1)`, "Gauss/cm", max \|gradient\|.
-        - ``smax``: `(N, xyz ⊻ 1)`, "Gauss/cm/Sec", max \|slew rate\|.
-        - ``rfmax``: `(N,(nCoils))`, "Gauss", max \|RF\|.
+        - ``gmax``: `(N ⊻ 1, xyz)`, "Gauss/cm", max \|gradient\|.
+        - ``smax``: `(N ⊻ 1, xyz)`, "Gauss/cm/Sec", max \|slew rate\|.
+        - ``rfmax``: `(N ⊻ 1,(nCoils))`, "Gauss", max \|RF\|.
         - ``rf``: `(N,xy, nT,(nCoils))`, "Gauss", ``xy`` for separating real \
           and imag part.
         - ``gr``: `(N,xyz,nT)`, "Gauss/cm"
-        - ``dt``: `(N,1,)`, "Sec" simulation temporal step size, i.e., dwell \
-          time.
+        - ``dt``: `(N ⊻ 1,)`, "Sec", dwell time.
         - ``desc``: str, an description of the pulse to be constructed.
     """
 
@@ -109,10 +109,17 @@ class Pulse(object):
 
         if k in ('rf', 'gr'):
             assert(v.shape[0] == self.shape[0] and v.shape[2] == self.shape[2])
-        if (k in ('gmax', 'smax')):
-            v = v.expand(self.gr.shape[:2])
-        if (k == 'rfmax' and v.ndim == 2 and v.shape[1] == 1):
-            v = v[:, 0]
+        elif (k in ('gmax', 'smax')):  # -> (N ⊻ 1, xyz)
+            v = v.expand((1 if v.ndim == 0 else v.shape[0], self.gr.shape[1]))
+        elif k == 'rfmax':  # -> (N ⊻ 1, (nCoils))
+            if v.ndim == 0:
+                v = v[None]
+            elif v.ndim == 2 and v.shape[1] == 1:
+                v = v[:, 0]
+        elif k == 'dt':
+            if v.ndim == 0:
+                v = v[None]
+            assert(v.ndim == 1)
 
         super().__setattr__(k, v)
         return
@@ -179,7 +186,8 @@ class Pulse(object):
         """
         assert(self.dt.numel() == dt.numel() == 1)
 
-        if dt.to(self.device) == self.dt:
+        dt_o_np, dt_n_np = self.dt.item(), dt.item()
+        if dt_o_np == dt_n_np:
             return copy.deepcopy(self)
 
         axis = 2  # Along temporal dimension
@@ -192,8 +200,6 @@ class Pulse(object):
         # convert to np array, then prepend 0's.
         rf_np, gr_np = f_0(f_np(self.rf)), f_0(f_np(self.gr))
 
-        dt_o_np, dt_n_np = f_np(self.dt.flatten()), f_np(dt.flatten())
-
         nT = rf_np.shape[axis]
 
         t_o = np.arange(0, nT)*dt_o_np  # (nT,)
@@ -204,7 +210,7 @@ class Pulse(object):
 
         rf_n, gr_n = tensor(f_rf(t_n), **dkw), tensor(f_gr(t_n), **dkw)
 
-        desc = self.desc + ' interpT\'ed: dt = ' + str(dt_n_np[0])
+        desc = self.desc + ' interpT\'ed: dt = ' + str(dt_n_np)
         return Pulse(rf_n, gr_n, dt=dt, desc=desc, **dkw)
 
     def to(self, device: torch.device = torch.device('cpu'),
@@ -955,7 +961,6 @@ class Examples(object):
 
         # Pulse
         p = Pulse(rf=rf, gr=gr, dt=dt, **kw)
-        print('Pulse(rf=rf, gr=gr, dt=gt, device=device, dtype=dtype): ')
         return p
 
     @staticmethod

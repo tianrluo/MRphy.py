@@ -25,8 +25,8 @@ class Test_utils:
     dkw = {'dtype': dtype, 'device': device}
 
     print(device)
-    γ = tensor([[γH]], device=device, dtype=dtype)  # Hz/Gauss
-    dt = tensor([[dt0]], device=device, dtype=dtype)   # Sec
+    γ = γH.to(**dkw)  # Hz/Gauss
+    dt = dt0.to(**dkw)   # Sec
 
     def test_ctrsub(self):
         dkw = self.dkw

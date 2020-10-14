@@ -8,7 +8,7 @@ from torch import Tensor
 from torch.autograd import Function
 from torch.autograd.function import _ContextMethodMixin as CTX
 
-from mrphy import T1G, T2G, γH, dt0, π
+from mrphy import γH, dt0, π
 
 
 # TODO:
@@ -39,8 +39,8 @@ class BlochSim(Function):
         Optionals:
             - ``T1``: `(N, *Nd,)`, "Sec", T1 relaxation.
             - ``T2``: `(N, *Nd,)`, "Sec", T2 relaxation.
-            - ``γ``:  `(N, *Nd,)`, "Hz/Gauss", gyro ratio in Hertz.
-            - ``dt``: `(N, 1, )`, "Sec", dwell time.
+            - ``γ``:  `(N, *Nd,)`, "Hz/Gauss", gyro ratio.
+            - ``dt``: `(N, 1,)`, "Sec", dwell time.
         Outputs:
             - ``Mo``: `(N, *Nd, xyz)`, Magetic spins after simulation.
         """
@@ -206,7 +206,7 @@ class BlochSim(Function):
 
 def blochsim(
         Mi: Tensor, Beff: Tensor,
-        T1: Optional[Tensor] = T1G, T2: Optional[Tensor] = T2G,
+        T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
         γ: Tensor = γH, dt: Tensor = dt0) -> Tensor:
     r"""Bloch simulator with explicit Jacobian operation.
 
@@ -216,13 +216,14 @@ def blochsim(
         ``Mo = blochsim(Mi, Beff; T1, T2, γ, dt)``
         ``Mo = blochsim(Mi, Beff; T1=None, T2=None, γ, dt)``
     Inputs:
-        - ``Mi``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium [0 0 1]
+        - ``Mi``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium \
+          [[[0 0 1]]].
         - ``Beff``: `(N, *Nd, xyz, nT)`, "Gauss", B-effective, magnetic field.
     Optionals:
-        - ``T1``: `(N, *Nd,)`, "Sec", T1 relaxation.
-        - ``T2``: `(N, *Nd,)`, "Sec", T2 relaxation.
-        - ``γ``:  `(N, *Nd,)`, "Hz/Gauss", gyro ratio in Hertz.
-        - ``dt``: `(N, 1, )`, "Sec", dwell time.
+        - ``T1``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T1 relaxation.
+        - ``T2``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T2 relaxation.
+        - ``γ``:  `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Hz/Gauss", gyro ratio.
+        - ``dt``: `()` ⊻ `(N ⊻ 1,)`, "Sec", dwell time.
     Outputs:
         - ``Mo``: `(N, *Nd, xyz)`, Magetic spins after simulation.
 
@@ -234,14 +235,13 @@ def blochsim(
 
     # %% Defaults and move to the same device
     assert(Mi.shape[:-1] == Beff.shape[:-2])
-    Beff = Beff.to(Mi.device)
+    Beff, ndim = Beff.to(Mi.device), Beff.ndim
+
+    # (N, *Nd, :, :) compatible for {γ, dt, T1, T2}
+    γ, dt = (x.reshape(x.shape+(ndim-x.ndim)*(1,)) for x in (γ, dt))
 
     assert((T1 is None) == (T2 is None))  # both or neither
-    if T1 is None:
-        γ, dt = (x.reshape(x.shape+(Beff.dim()-x.dim())*(1,))
-                 for x in (γ, dt))  # (N, *Nd, :, :) compatible
-    else:
-        T1, T2, γ, dt = (x.reshape(x.shape+(Beff.dim()-x.dim())*(1,))
-                         for x in (T1, T2, γ, dt))  # (N, *Nd, :, :) compatible
+    if T1 is not None:
+        T1, T2 = (x.reshape(x.shape+(ndim-x.ndim)*(1,)) for x in (T1, T2))
 
     return BlochSim.apply(Mi, Beff, T1, T2, γ, dt)

@@ -9,7 +9,7 @@ from numbers import Number
 import torch
 import numpy as np
 from numpy import ndarray as ndarray_c
-from torch import tensor, Tensor
+from torch import Tensor
 
 from mrphy import γH, dt0, π
 if torch.cuda.is_available():
@@ -33,34 +33,36 @@ def ctrsub(shape):
     return shape//2
 
 
-def g2k(g: Tensor, isTx: bool,
-        γ: Tensor = tensor([[γH]]), dt: Tensor = tensor([[dt0]])) -> Tensor:
+def g2k(g: Tensor, isTx: bool, γ: Tensor = γH, dt: Tensor = dt0) -> Tensor:
     r"""Compute k-space from gradients.
 
     Usage:
-        ``k = g2k(g, isTx; γ=γ¹H, dt=dt0)``
+        ``k = g2k(g, isTx; γ, dt)``
 
     Inputs:
         - ``g``: `(N, xyz, nT)`, "Gauss/cm", gradient
         - ``isTx``, if ``true``, compute transmit k-space, `k`, ends at the \
           origin.
     Optionals:
-        - ``γ``: `(N, 1,)`, "Hz/Gauss", gyro-ratio.
-        - ``dt``: `(N, 1,)`, "sec", gradient temporal step size, i.e., dwell \
-          time.
+        - ``γ``:  `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Hz/Gauss", gyro ratio
+        - ``dt``: `()` ⊻ `(N ⊻ 1,)`, "Sec", dwell time.
     Outputs:
         - ``k``: `(N, xyz, nT)`, "cycle/cm", Tx or Rx k-space.
 
     See Also:
         :func:`~mrphy.utils.g2s`, :func:`~mrphy.utils.k2g`
     """
+    # (N, xyz, nT) compatible
+    ndim = g.ndim
+    γ, dt = (x.reshape(x.shape+(ndim-x.ndim)*(1,)) for x in (γ, dt))
+
     k = γ * dt * torch.cumsum(g, dim=2)
     if isTx:
         k -= k[:, :, [-1]]
     return k
 
 
-def g2s(g: Tensor, dt: Tensor = tensor([[dt0]])) -> Tensor:
+def g2s(g: Tensor, dt: Tensor = dt0) -> Tensor:
     r"""Compute slew rates from gradients.
 
     Usage:
@@ -68,35 +70,32 @@ def g2s(g: Tensor, dt: Tensor = tensor([[dt0]])) -> Tensor:
     Inputs:
         - ``g``: `(N, xyz, nT)`, "Gauss/cm", gradient
     Optionals:
-        - ``dt``: `(N, 1,)`, "sec", gradient temporal step size, i.e., dwell \
-          time.
+        - ``dt``: `()` ⊻ `(N ⊻ 1,)`, "Sec", dwell time.
     Outputs:
         - ``s``: `(N, xyz, nT)`, "cycle/cm/sec", slew rate
 
     See Also:
         :func:`~mrphy.utils.g2k`, :func:`~mrphy.utils.s2g`
     """
-    s = torch.cat((g[:, :, [0]],
-                   g[:, :, 1:] - g[:, :, :-1]),
-                  dim=2)/(dt[..., None])
+    dt = dt.reshape(dt.shape+(g.ndim-dt.ndim)*(1,))
+
+    s = torch.cat((g[:, :, [0]], g[:, :, 1:] - g[:, :, :-1]), dim=2)/dt
     return s
 
 
-def k2g(k: Tensor, isTx: bool,
-        γ: Tensor = tensor([[γH]]), dt: Tensor = tensor([[dt0]])) -> Tensor:
+def k2g(k: Tensor, isTx: bool, γ: Tensor = γH, dt: Tensor = dt0) -> Tensor:
     r"""Compute k-space from gradients
 
     Usage:
-        ``k = k2g(k, isTx; γ=γ¹H, dt=dt0)``
+        ``k = k2g(k, isTx; γ, dt)``
 
     Inputs:
         - ``k``: `(N, xyz, nT)`, "cycle/cm", Tx or Rx k-space.
         - ``isTx``, if ``true``, compute transmit k-space, ``k``, must end at \
           the origin.
     Optionals:
-        - ``γ``: `(N, 1,)`, "Hz/Gauss", gyro-ratio.
-        - ``dt``: `(N, 1,)`, "sec", gradient temporal step size, i.e., dwell \
-          time.
+        - ``γ``:  `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Hz/Gauss", gyro ratio
+        - ``dt``: `()` ⊻ `(N ⊻ 1,)`, "Sec", dwell time.
     Outputs:
         - ``g``: `(N, xyz, nT)`, "Gauss/cm", gradient
 
@@ -104,9 +103,11 @@ def k2g(k: Tensor, isTx: bool,
         :func:`~mrphy.utils.g2k`
     """
     assert((not isTx) or torch.all(k[:, :, -1] == 0))  # Tx k must end at 0
-    g = torch.cat((k[:, :, [0]],
-                   k[:, :, 1:] - k[:, :, :-1]),
-                  dim=2)/((γ*dt)[..., None])
+
+    ndim = k.ndim
+    γ, dt = (x.reshape(x.shape+(ndim-x.ndim)*(1,)) for x in (γ, dt))
+
+    g = torch.cat((k[:, :, [0]], k[:, :, 1:] - k[:, :, :-1]), dim=2)/γ/dt
     return g
 
 
@@ -161,7 +162,7 @@ def rf2tρθ(rf: Tensor, rfmax: Tensor) -> Tuple[Tensor, Tensor]:
     See Also:
         :func:`~mrphy.utils.tρθ2rf`
     """
-    rfmax = rfmax[None] if rfmax.ndim == 0 else rfmax
+    rfmax = rfmax[None] if rfmax.ndim == 0 else rfmax  # scalar to 1d-tensor
     tρ = (rf.norm(dim=1, keepdim=True)/rfmax[:, None, None, ...]*π/2).tan()
     θ = torch.atan2(rf[:, [1], :], rf[:, [0], :])
     return tρ, θ
@@ -189,24 +190,25 @@ def rfclamp(rf: Tensor, rfmax: Tensor, eps: Number = 1e-7) -> Tensor:
     return rf.mul(((rfmax[:, None, None, ...]-eps)/rf_abs).clamp_(max=1))
 
 
-def s2g(s: Tensor, dt: Tensor = tensor([[dt0]])) -> Tensor:
+def s2g(s: Tensor, dt: Tensor = dt0) -> Tensor:
     r"""Compute gradients from slew rates.
 
     Usage:
-        ``g = s2g(s, dt=dt0)``
+        ``g = s2g(s; dt)``
 
     Inputs:
         - ``s``: `(N, xyz, nT)`, "Gauss/cm/Sec", Slew rate.
     Optionals:
-        - ``dt``: `(N, 1,)`, "sec", gradient temporal step size, i.e., dwell \
-          time.
+        - ``dt``: `()` ⊻ `(N ⊻ 1,)`, "Sec", dwell time.
     Outputs:
         - ``g``: `(N, xyz, nT)`, "Gauss/cm", Gradient.
 
     See Also:
         :func:`~mrphy.utils.g2s`
     """
-    g = dt[..., None]*torch.cumsum(s, dim=2)
+    dt = dt.reshape(dt.shape+(s.ndim-dt.ndim)*(1,))
+
+    g = dt*torch.cumsum(s, dim=2)
     return g
 
 
@@ -291,9 +293,7 @@ def uϕrot(U: Tensor, Φ: Tensor, Vi: Tensor):
 
     Apply axis-angle, `U-Phi` rotation on `V`.
     Rotation is broadcasted on `V`.
-    See `wikipedia \
-    <https://en.wikipedia.org/wiki/Rotation_matrix#\
-    Rotation_matrix_from_axis_and_angle>`_.
+    See `wikipedia <https://w.wiki/Knf>`_.
 
     Inputs:
         - ``U``:  `(N, *Nd, xyz)`, 3D rotation axes, assumed unitary;
@@ -303,7 +303,7 @@ def uϕrot(U: Tensor, Φ: Tensor, Vi: Tensor):
         - ``Vo``: `(N, *Nd, xyz, (nV))`, vectors rotated;
     """
     # No in-place op, repetitive alloc is nece. for tracking the full Jacobian.
-    (dim, Φ, U) = ((-1, Φ[..., None], U) if Vi.dim() == U.dim() else
+    (dim, Φ, U) = ((-1, Φ[..., None], U) if Vi.ndim == U.ndim else
                    (-2, Φ[..., None, None], U[..., None]))
 
     cΦ, sΦ = torch.cos(Φ), torch.sin(Φ)
