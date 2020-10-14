@@ -160,22 +160,22 @@
 <p>Simulation codes with implicit Jacobian operations.</p>
 <dl class="py function">
 <dt id="mrphy.slowsims.blochsim">
-<code class="sig-prename descclassname">mrphy.slowsims.</code><code class="sig-name descname">blochsim</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">M</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">Beff</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">T1</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">T2</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">γ</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.slowsims.blochsim" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">mrphy.slowsims.</code><code class="sig-name descname">blochsim</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">M</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">Beff</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">T1</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">T2</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">γ</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor(4257.6, dtype=torch.float64)</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor(4e-06, dtype=torch.float64)</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.slowsims.blochsim" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bloch simulator with implicit Jacobian operations.</p>
 <dl class="simple">
 <dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">Mo</span> <span class="pre">=</span> <span class="pre">blochsim(Mi,</span> <span class="pre">Beff;</span> <span class="pre">T1,</span> <span class="pre">T2,</span> <span class="pre">γ,</span> <span class="pre">dt)</span></code>
 <code class="docutils literal notranslate"><span class="pre">Mo</span> <span class="pre">=</span> <span class="pre">blochsim(Mi,</span> <span class="pre">Beff;</span> <span class="pre">T1=None,</span> <span class="pre">T2=None,</span> <span class="pre">γ,</span> <span class="pre">dt)</span></code></p>
 </dd>
 <dt>Inputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: <cite>(N, *Nd, xyz)</cite>, Magnetic spins, assumed equilibrium magnitude [0 0 1]</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">Beff</span></code>: <cite>(N, *Nd, xyz, nT)</cite>, “Gauss”, B-effective, magnetic field applied.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: <cite>(N, *Nd, xyz)</cite>, Magnetic spins, assumed equilibrium [[[0 0 1]]].</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Beff</span></code>: <cite>(N, *Nd, xyz, nT)</cite>, “Gauss”, B-effective, magnetic field.</p></li>
 </ul>
 </dd>
 <dt>OPTIONALS:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">T1</span></code>: <cite>(N, *Nd,)</cite>, “Sec”, T1 relaxation.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">T2</span></code>: <cite>(N, *Nd,)</cite>, “Sec”, T2 relaxation.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">γ</span></code>:  <cite>(N, *Nd,)</cite>, “Hz/Gauss”, gyro ratio in Hertz.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>(N, 1, )</cite>, “Sec”, dwell time.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">T1</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1, *Nd ⊻ 1,)</cite>, “Sec”, T1 relaxation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">T2</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1, *Nd ⊻ 1,)</cite>, “Sec”, T2 relaxation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">γ</span></code>:  <cite>()</cite> ⊻ <cite>(N ⊻ 1, *Nd ⊻ 1,)</cite>, “Hz/Gauss”, gyro ratio.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1,)</cite>, “Sec”, dwell time.</p></li>
 </ul>
 </dd>
 <dt>Outputs:</dt><dd><ul class="simple">
@@ -197,13 +197,13 @@
 <dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">blochsim_1step(M,</span> <span class="pre">M1,</span> <span class="pre">b,</span> <span class="pre">E1,</span> <span class="pre">E1_1,</span> <span class="pre">E2,</span> <span class="pre">γ2πdt)</span></code></p>
 </dd>
 <dt>Inputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: <cite>(N, *Nd, xyz)</cite>, Magnetic spins, assumed equilibrium magnitude [0 0 1]</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: <cite>(N, *Nd, xyz)</cite>, Magnetic spins, assumed equilibrium [[[0 0 1]]].</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">M1</span></code>: <cite>(N, *Nd, xyz)</cite>, pre-allocated variable for <cite>uϕrot</cite> output.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">b</span></code>: <cite>(N, *Nd, xyz)</cite>, “Gauss”, B-effective, magnetic field applied.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">E1</span></code>: <cite>(N, 1,)</cite>, a.u., T1 reciprocal exponential, global.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">E1_1</span></code>: <cite>(N, 1,)</cite>, a.u., T1 reciprocal exponential subtracted by <code class="docutils literal notranslate"><span class="pre">1</span></code>, global.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">E2</span></code>: <cite>(N, 1,)</cite>, a.u., T2 reciprocal exponential, global.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">γ2πdt</span></code>: <cite>(N, 1,)</cite>, “rad/Gauss”, gyro ratio mutiplied by <cite>dt</cite>, global.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">E1</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1, *Nd ⊻ 1,)</cite>, a.u., T1 reciprocal exponential.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">E1_1</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1, *Nd ⊻ 1,)</cite>, a.u., T1 reciprocal exponential subtracted by <code class="docutils literal notranslate"><span class="pre">1</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">E2</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1, *Nd ⊻ 1,)</cite>, a.u., T2 reciprocal exponential.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">γ2πdt</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1, *Nd ⊻ 1,)</cite>, “rad/Gauss”, gyro ratio in radiance mutiplied by <cite>dt</cite>.</p></li>
 </ul>
 </dd>
 <dt>Outputs:</dt><dd><ul class="simple">

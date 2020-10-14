@@ -171,10 +171,10 @@
 
 <dl class="py function">
 <dt id="mrphy.utils.g2k">
-<code class="sig-prename descclassname">mrphy.utils.</code><code class="sig-name descname">g2k</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">g</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">isTx</span><span class="p">:</span> <span class="n">bool</span></em>, <em class="sig-param"><span class="n">γ</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor([[4257.6]], dtype=torch.float64)</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor([[4e-06]], dtype=torch.float64)</span></em><span class="sig-paren">)</span> &#x2192; torch.Tensor<a class="headerlink" href="#mrphy.utils.g2k" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">mrphy.utils.</code><code class="sig-name descname">g2k</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">g</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">isTx</span><span class="p">:</span> <span class="n">bool</span></em>, <em class="sig-param"><span class="n">γ</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor(4257.6, dtype=torch.float64)</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor(4e-06, dtype=torch.float64)</span></em><span class="sig-paren">)</span> &#x2192; torch.Tensor<a class="headerlink" href="#mrphy.utils.g2k" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute k-space from gradients.</p>
 <dl class="simple">
-<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">=</span> <span class="pre">g2k(g,</span> <span class="pre">isTx;</span> <span class="pre">γ=γ¹H,</span> <span class="pre">dt=dt0)</span></code></p>
+<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">=</span> <span class="pre">g2k(g,</span> <span class="pre">isTx;</span> <span class="pre">γ,</span> <span class="pre">dt)</span></code></p>
 </dd>
 <dt>Inputs:</dt><dd><ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">g</span></code>: <cite>(N, xyz, nT)</cite>, “Gauss/cm”, gradient</p></li>
@@ -182,8 +182,8 @@
 </ul>
 </dd>
 <dt>Optionals:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">γ</span></code>: <cite>(N, 1,)</cite>, “Hz/Gauss”, gyro-ratio.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>(N, 1,)</cite>, “sec”, gradient temporal step size, i.e., dwell time.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">γ</span></code>:  <cite>()</cite> ⊻ <cite>(N ⊻ 1, *Nd ⊻ 1,)</cite>, “Hz/Gauss”, gyro ratio</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1,)</cite>, “Sec”, dwell time.</p></li>
 </ul>
 </dd>
 <dt>Outputs:</dt><dd><ul class="simple">
@@ -197,7 +197,7 @@
 
 <dl class="py function">
 <dt id="mrphy.utils.g2s">
-<code class="sig-prename descclassname">mrphy.utils.</code><code class="sig-name descname">g2s</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">g</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor([[4e-06]], dtype=torch.float64)</span></em><span class="sig-paren">)</span> &#x2192; torch.Tensor<a class="headerlink" href="#mrphy.utils.g2s" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">mrphy.utils.</code><code class="sig-name descname">g2s</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">g</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor(4e-06, dtype=torch.float64)</span></em><span class="sig-paren">)</span> &#x2192; torch.Tensor<a class="headerlink" href="#mrphy.utils.g2s" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute slew rates from gradients.</p>
 <dl class="simple">
 <dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">s</span> <span class="pre">=</span> <span class="pre">g2s(g;</span> <span class="pre">dt)</span></code></p>
@@ -207,7 +207,7 @@
 </ul>
 </dd>
 <dt>Optionals:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>(N, 1,)</cite>, “sec”, gradient temporal step size, i.e., dwell time.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1,)</cite>, “Sec”, dwell time.</p></li>
 </ul>
 </dd>
 <dt>Outputs:</dt><dd><ul class="simple">
@@ -221,10 +221,10 @@
 
 <dl class="py function">
 <dt id="mrphy.utils.k2g">
-<code class="sig-prename descclassname">mrphy.utils.</code><code class="sig-name descname">k2g</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">k</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">isTx</span><span class="p">:</span> <span class="n">bool</span></em>, <em class="sig-param"><span class="n">γ</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor([[4257.6]], dtype=torch.float64)</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor([[4e-06]], dtype=torch.float64)</span></em><span class="sig-paren">)</span> &#x2192; torch.Tensor<a class="headerlink" href="#mrphy.utils.k2g" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">mrphy.utils.</code><code class="sig-name descname">k2g</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">k</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">isTx</span><span class="p">:</span> <span class="n">bool</span></em>, <em class="sig-param"><span class="n">γ</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor(4257.6, dtype=torch.float64)</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor(4e-06, dtype=torch.float64)</span></em><span class="sig-paren">)</span> &#x2192; torch.Tensor<a class="headerlink" href="#mrphy.utils.k2g" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute k-space from gradients</p>
 <dl class="simple">
-<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">=</span> <span class="pre">k2g(k,</span> <span class="pre">isTx;</span> <span class="pre">γ=γ¹H,</span> <span class="pre">dt=dt0)</span></code></p>
+<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">=</span> <span class="pre">k2g(k,</span> <span class="pre">isTx;</span> <span class="pre">γ,</span> <span class="pre">dt)</span></code></p>
 </dd>
 <dt>Inputs:</dt><dd><ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">k</span></code>: <cite>(N, xyz, nT)</cite>, “cycle/cm”, Tx or Rx k-space.</p></li>
@@ -232,8 +232,8 @@
 </ul>
 </dd>
 <dt>Optionals:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">γ</span></code>: <cite>(N, 1,)</cite>, “Hz/Gauss”, gyro-ratio.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>(N, 1,)</cite>, “sec”, gradient temporal step size, i.e., dwell time.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">γ</span></code>:  <cite>()</cite> ⊻ <cite>(N ⊻ 1, *Nd ⊻ 1,)</cite>, “Hz/Gauss”, gyro ratio</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1,)</cite>, “Sec”, dwell time.</p></li>
 </ul>
 </dd>
 <dt>Outputs:</dt><dd><ul class="simple">
@@ -334,17 +334,17 @@
 
 <dl class="py function">
 <dt id="mrphy.utils.s2g">
-<code class="sig-prename descclassname">mrphy.utils.</code><code class="sig-name descname">s2g</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">s</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor([[4e-06]], dtype=torch.float64)</span></em><span class="sig-paren">)</span> &#x2192; torch.Tensor<a class="headerlink" href="#mrphy.utils.s2g" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">mrphy.utils.</code><code class="sig-name descname">s2g</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">s</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor(4e-06, dtype=torch.float64)</span></em><span class="sig-paren">)</span> &#x2192; torch.Tensor<a class="headerlink" href="#mrphy.utils.s2g" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute gradients from slew rates.</p>
 <dl class="simple">
-<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">g</span> <span class="pre">=</span> <span class="pre">s2g(s,</span> <span class="pre">dt=dt0)</span></code></p>
+<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">g</span> <span class="pre">=</span> <span class="pre">s2g(s;</span> <span class="pre">dt)</span></code></p>
 </dd>
 <dt>Inputs:</dt><dd><ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">s</span></code>: <cite>(N, xyz, nT)</cite>, “Gauss/cm/Sec”, Slew rate.</p></li>
 </ul>
 </dd>
 <dt>Optionals:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>(N, 1,)</cite>, “sec”, gradient temporal step size, i.e., dwell time.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1,)</cite>, “Sec”, dwell time.</p></li>
 </ul>
 </dd>
 <dt>Outputs:</dt><dd><ul class="simple">
@@ -451,7 +451,7 @@
 </dl>
 <p>Apply axis-angle, <cite>U-Phi</cite> rotation on <cite>V</cite>.
 Rotation is broadcasted on <cite>V</cite>.
-See <a class="reference external" href="https://en.wikipedia.org/wiki/Rotation_matrix# Rotation_matrix_from_axis_and_angle">wikipedia </a>.</p>
+See <a href="#id1"><span class="problematic" id="id2">`wikipedia&lt;https://w.wiki/Knf&gt;`_</span></a>.</p>
 <dl class="simple">
 <dt>Inputs:</dt><dd><ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">U</span></code>:  <cite>(N, *Nd, xyz)</cite>, 3D rotation axes, assumed unitary;</p></li>

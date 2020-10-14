@@ -180,10 +180,10 @@
 <dt>Inputs:</dt><dd><ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">rf</span></code>: <cite>(N,xy, nT,(nCoils))</cite> “Gauss”, <code class="docutils literal notranslate"><span class="pre">xy</span></code> for separating real and imag part.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">gr</span></code>: <cite>(N,xyz,nT)</cite>, “Gauss/cm”</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>(N,1,)</cite>, “Sec” simulation temporal step size, dwell time.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">gmax</span></code>: <cite>(N, xyz ⊻ 1)</cite>, “Gauss/cm”, max |gradient|.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">smax</span></code>: <cite>(N, xyz ⊻ 1)</cite>, “Gauss/cm/Sec”, max |slew rate|.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">rfmax</span></code>: <cite>(N,(nCoils))</cite>, “Gauss”, max |RF|.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1,)</cite>, “Sec”, dwell time.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gmax</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1, xyz ⊻ 1)</cite>, “Gauss/cm”, max |gradient|.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">smax</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1, xyz ⊻ 1)</cite>, “Gauss/cm/Sec”, max |slew rate|.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rfmax</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1,(nCoils))</cite>, “Gauss”, max |RF|.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">desc</span></code>: str, an description of the pulse to be constructed.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">device</span></code>: torch.device.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">dtype</span></code>: torch.dtype.</p></li>
@@ -194,12 +194,12 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">dtype</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">is_cuda</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">shape</span></code>: <code class="docutils literal notranslate"><span class="pre">(N,1,nT)</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">gmax</span></code>: <cite>(N, xyz ⊻ 1)</cite>, “Gauss/cm”, max |gradient|.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">smax</span></code>: <cite>(N, xyz ⊻ 1)</cite>, “Gauss/cm/Sec”, max |slew rate|.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">rfmax</span></code>: <cite>(N,(nCoils))</cite>, “Gauss”, max |RF|.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gmax</span></code>: <cite>(N ⊻ 1, xyz)</cite>, “Gauss/cm”, max |gradient|.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">smax</span></code>: <cite>(N ⊻ 1, xyz)</cite>, “Gauss/cm/Sec”, max |slew rate|.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rfmax</span></code>: <cite>(N ⊻ 1,(nCoils))</cite>, “Gauss”, max |RF|.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">rf</span></code>: <cite>(N,xy, nT,(nCoils))</cite>, “Gauss”, <code class="docutils literal notranslate"><span class="pre">xy</span></code> for separating real and imag part.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">gr</span></code>: <cite>(N,xyz,nT)</cite>, “Gauss/cm”</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>(N,1,)</cite>, “Sec” simulation temporal step size, i.e., dwell time.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dt</span></code>: <cite>(N ⊻ 1,)</cite>, “Sec”, dwell time.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">desc</span></code>: str, an description of the pulse to be constructed.</p></li>
 </ul>
 </dd>
