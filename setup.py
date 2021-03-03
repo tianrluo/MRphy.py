@@ -15,11 +15,11 @@ def cuda_is_available():
         return False
     return False
 
-REQUIRED_PACKAGES = ['torch>=1.3', 'numpy', 'scipy']
+# REQUIRED_PACKAGES = ['torch>=1.3', 'numpy', 'scipy']
 
-# REQUIRED_PACKAGES = ['torch>=1.3', 'numpy', 'cupy>=7.0.0']
-# if not cuda_is_available():
-#     REQUIRED_PACKAGES.remove('cupy>=7.0.0')
+REQUIRED_PACKAGES = ['torch>=1.3', 'numpy', 'cupy>=7.0.0']
+if not cuda_is_available():
+    REQUIRED_PACKAGES.remove('cupy>=7.0.0')
 
 with open("README.md", "r") as h:
     long_description = h.read()
