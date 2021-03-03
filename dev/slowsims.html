@@ -3,9 +3,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
   <title>mrphy.slowsims &mdash; MRphy.py 0.1.6 documentation</title>
   
@@ -16,7 +16,10 @@
 
   
   
+
   
+  
+
   
 
   
@@ -29,7 +32,6 @@
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -51,7 +53,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> MRphy.py
+            <a href="index.html" class="icon icon-home"> MRphy.py
           
 
           
@@ -130,6 +132,8 @@
 
 
 
+
+
 <div role="navigation" aria-label="breadcrumbs navigation">
 
   <ul class="wy-breadcrumbs">
@@ -141,7 +145,7 @@
     
       <li class="wy-breadcrumbs-aside">
         
-            
+          
             <a href="_sources/slowsims.rst.txt" rel="nofollow"> View page source</a>
           
         
@@ -160,7 +164,7 @@
 <p>Simulation codes with implicit Jacobian operations.</p>
 <dl class="py function">
 <dt id="mrphy.slowsims.blochsim">
-<code class="sig-prename descclassname">mrphy.slowsims.</code><code class="sig-name descname">blochsim</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">M</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">Beff</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">T1</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">T2</span><span class="p">:</span> <span class="n">Optional<span class="p">[</span>torch.Tensor<span class="p">]</span></span> <span class="o">=</span> <span class="default_value">None</span></em>, <em class="sig-param"><span class="n">γ</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor(4257.6, dtype=torch.float64)</span></em>, <em class="sig-param"><span class="n">dt</span><span class="p">:</span> <span class="n">torch.Tensor</span> <span class="o">=</span> <span class="default_value">tensor(4e-06, dtype=torch.float64)</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.slowsims.blochsim" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">mrphy.slowsims.</span></code><code class="sig-name descname"><span class="pre">blochsim</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">M</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Beff</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T1</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T2</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">γ</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">tensor(4257.6000,</span> <span class="pre">dtype=torch.float64)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">tensor(4.0000e-06,</span> <span class="pre">dtype=torch.float64)</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.slowsims.blochsim" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bloch simulator with implicit Jacobian operations.</p>
 <dl class="simple">
 <dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">Mo</span> <span class="pre">=</span> <span class="pre">blochsim(Mi,</span> <span class="pre">Beff;</span> <span class="pre">T1,</span> <span class="pre">T2,</span> <span class="pre">γ,</span> <span class="pre">dt)</span></code>
@@ -191,7 +195,7 @@
 
 <dl class="py function">
 <dt id="mrphy.slowsims.blochsim_1step">
-<code class="sig-prename descclassname">mrphy.slowsims.</code><code class="sig-name descname">blochsim_1step</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">M</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">M1</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">b</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">E1</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">E1_1</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">E2</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">γ2πdt</span><span class="p">:</span> <span class="n">torch.Tensor</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.slowsims.blochsim_1step" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">mrphy.slowsims.</span></code><code class="sig-name descname"><span class="pre">blochsim_1step</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">M</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">M1</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">E1</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">E1_1</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">E2</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">γ2πdt</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.slowsims.blochsim_1step" title="Permalink to this definition">¶</a></dt>
 <dd><p>Single step bloch simulation</p>
 <dl class="simple">
 <dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">blochsim_1step(M,</span> <span class="pre">M1,</span> <span class="pre">b,</span> <span class="pre">E1,</span> <span class="pre">E1_1,</span> <span class="pre">E2,</span> <span class="pre">γ2πdt)</span></code></p>
@@ -215,7 +219,7 @@
 
 <dl class="py function">
 <dt id="mrphy.slowsims.blochsim_ab">
-<code class="sig-prename descclassname">mrphy.slowsims.</code><code class="sig-name descname">blochsim_ab</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">M</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">A</span><span class="p">:</span> <span class="n">torch.Tensor</span></em>, <em class="sig-param"><span class="n">B</span><span class="p">:</span> <span class="n">torch.Tensor</span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.slowsims.blochsim_ab" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname"><span class="pre">mrphy.slowsims.</span></code><code class="sig-name descname"><span class="pre">blochsim_ab</span></code><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">M</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">A</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">B</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.slowsims.blochsim_ab" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bloch simulation via Hargreave’s mat/vec representation</p>
 <dl class="simple">
 <dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">blochsim_ab(M,</span> <span class="pre">A,</span> <span class="pre">B)</span></code></p>
@@ -240,37 +244,29 @@
            
           </div>
           <footer>
-  
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="mobjs.html" class="btn btn-neutral float-right" title="mrphy.mobjs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="sims.html" class="btn btn-neutral float-left" title="mrphy.sims" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+        <a href="mobjs.html" class="btn btn-neutral float-right" title="mrphy.mobjs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="sims.html" class="btn btn-neutral float-left" title="mrphy.sims" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2020, Tianrui Luo
+        &#169; Copyright 2020, Tianrui Luo.
 
     </p>
   </div>
     
     
     
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     
     provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
-
         </div>
       </div>
 
