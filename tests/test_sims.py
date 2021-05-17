@@ -26,6 +26,7 @@ class Test_sims:
         *Note*:
         This test relies on the correctness of `test_slowsims.py`.
         """
+        f_t2np = lambda x: x.detach().clone().cpu().numpy()
 
         print('\n')
         dkw, atol = self.dkw, self.atol
@@ -63,6 +64,10 @@ class Test_sims:
         beff = beffective.rfgr2beff(rf, gr, loc, Δf, b1Map, γ)
         beff.requires_grad = True
 
+        # Check handling of 1-coil `rf`, `b1Map` that omitted the `nCoils` dim
+        beff_missing_dim = beffective.rfgr2beff(rf[...,0], gr, loc, Δf,
+                                                b1Map[...,0], γ)
+
         # %% sim
         print('\nblochsim tests:')
         t = time.time()
@@ -73,8 +78,8 @@ class Test_sims:
         t = time.time()
         res1a.backward()  # keep graph to check `bar.backward()`
         print('backward: slowsims.blochsim', time.time() - t)
-        grad_M0_1a = M0.grad.clone().cpu().numpy()
-        grad_beff_1a = beff.grad.clone().cpu().numpy()
+        grad_M0_1a = f_t2np(M0.grad)
+        grad_beff_1a = f_t2np(beff.grad)
 
         M0.grad, beff.grad = None, None
 
@@ -86,12 +91,15 @@ class Test_sims:
         t = time.time()
         res2a.backward()  # keep graph to check `bar.backward()`
         print('backward: sims.blochsim', time.time() - t)
-        grad_M0_2a = M0.grad.clone().cpu().numpy()
-        grad_beff_2a = beff.grad.clone().cpu().numpy()
+        grad_M0_2a = f_t2np(M0.grad)
+        grad_beff_2a = f_t2np(beff.grad)
 
         M0.grad, beff.grad = None, None
 
         # %% assertion
+        assert(pytest.approx(f_t2np(beff), abs=atol)
+                             == f_t2np(beff_missing_dim))
+
         assert(pytest.approx(grad_M0_1a, abs=atol) == grad_M0_2a)
         assert(pytest.approx(grad_beff_1a, abs=atol) == grad_beff_2a)
 
@@ -101,8 +109,8 @@ class Test_sims:
 
         res1b = torch.sum(Mo_1b)
         res1b.backward()  # keep graph to check `bar.backward()`
-        grad_M0_1b = M0.grad.clone().cpu().numpy()
-        grad_beff_1b = beff.grad.clone().cpu().numpy()
+        grad_M0_1b = f_t2np(M0.grad)
+        grad_beff_1b = f_t2np(beff.grad)
 
         M0.grad, beff.grad = None, None
 
@@ -114,8 +122,8 @@ class Test_sims:
         t = time.time()
         res2b.backward()  # keep graph to check `bar.backward()`
         print('backward: sims.blochsim', time.time() - t)
-        grad_M0_2b = M0.grad.clone().cpu().numpy()
-        grad_beff_2b = beff.grad.clone().cpu().numpy()
+        grad_M0_2b = f_t2np(M0.grad)
+        grad_beff_2b = f_t2np(beff.grad)
 
         M0.grad, beff.grad = None, None
 

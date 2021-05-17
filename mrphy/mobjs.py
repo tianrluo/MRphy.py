@@ -101,7 +101,9 @@ class Pulse(object):
         return
 
     def __setattr__(self, k, v):
-        assert (k not in self._readonly), "'%s' is read-only." % k
+        if k in self._readonly:
+            raise AttributeError(f"'Pulse' object attribute '{k}'"
+                                  " is read-only")
 
         if k != 'desc':
             kw = {'device': self.device, 'dtype': self.dtype}
@@ -210,7 +212,7 @@ class Pulse(object):
 
         rf_n, gr_n = tensor(f_rf(t_n), **dkw), tensor(f_gr(t_n), **dkw)
 
-        desc = self.desc + ' interpT\'ed: dt = ' + str(dt_n_np)
+        desc = f"{self.desc} + interpT\'ed: dt = {dt_n_np}"
         return Pulse(rf_n, gr_n, dt=dt, desc=desc, **dkw)
 
     def to(self, device: torch.device = torch.device('cpu'),
@@ -346,14 +348,16 @@ class SpinArray(object):
 
     def __getattr__(self, k):
         if k+'_' not in self._compact:
-            raise AttributeError("'SpinArray' has no attribute '%s'" % k)
+            raise AttributeError(f"'SpinArray' has no attribute '{k}'")
 
         v_ = getattr(self, k+'_')
         return (self.embed(v_) if self.nM != np.prod(self.shape[1:]) else
                 v_.reshape(self.shape+v_.shape[2:]))  # ``mask`` is all True
 
     def __setattr__(self, k_, v_):
-        assert (k_ not in self._readonly), "'%s' is read-only." % k_
+        if (k_ in self._readonly) or (k_+'_' in self._readonly):
+            raise AttributeError(f"'SpinArray' object attribute '{k_}'"
+                                  " is read-only")
 
         # Transfer ``v_`` to ``kw`` before ``extract`
         kw = {'device': self.device, 'dtype': self.dtype}
@@ -362,7 +366,6 @@ class SpinArray(object):
         shape = self.shape
         if k_+'_' in self._compact:  # enable non-compact assignment
             k_ = k_+'_'
-            assert (k_ not in self._readonly), "'%s' is read-only." % k_
             v_ = self.extract(v_.expand(shape+(3,) if k_ == 'M_' else shape))
 
         # `tensor.expand(size)` needs `tensor.shape` broadcastable with `size`
@@ -686,14 +689,16 @@ class SpinCube(object):
             try:
                 return getattr(self.spinarray, k)
             except AttributeError:
-                raise AttributeError("'SpinCube' has no attribute '%s'" % k)
+                raise AttributeError(f"'SpinCube' has no attribute '{k}'")
 
         v_, sp = getattr(self, k+'_'), self.spinarray
         return (sp.embed(v_) if sp.nM != np.prod(sp.shape[1:]) else
                 v_.reshape(sp.shape+v_.shape[2:]))  # `mask` is all True
 
     def __setattr__(self, k_, v_):
-        assert (k_ not in self._readonly), "'%s' is read-only." % k_
+        if (k_ in self._readonly) or (k_+'_' in self._readonly):
+            raise AttributeError(f"'SpinCube' object attribute '{k_}'"
+                                  " is read-only")
 
         sp = self.spinarray
         if k_ in SpinArray.__slots__ or k_+'_' in SpinArray.__slots__:
@@ -706,7 +711,6 @@ class SpinCube(object):
         shape = sp.shape
         if k_+'_' in self._compact:  # `loc_` excluded by beginning assert
             k_ = k_+'_'
-            assert (k_ not in self._readonly), "'%s' is read-only." % k_
             v_ = self.extract(v_.expand(shape+(3,) if k_ == 'loc_' else shape))
 
         if k_ == 'Δf_':
