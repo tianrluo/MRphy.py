@@ -27,8 +27,8 @@ A trailing ``_`` in a variable/attribute name indicates compactness, i.e.
 instead of size ``(N, *Nd, ...)``, the variable/attributes size
 ``(N, nM, ...)``.
 For instance:
-A field map variable ``b0map`` may be of size ``(N, nx, ny, nz)``, while its
-compact countarpart ``b0map_`` has a size of ``(N, nM)``.
+A field map variable ``Δf`` may be of size ``(N, nx, ny, nz)``, while its
+compact countarpart ``Δf_`` has a size of ``(N, nM)``.
 
 Special keywords used in documentations:
 ----------------------------------------
@@ -44,7 +44,7 @@ Special keywords used in documentations:
 - ``⊻``: **Either or**. \
   When used in enumerating function keywords arguments, it means the function \
   accepts at most one of the keywords in a set as an input, e.g., \
-  ``b0map ⊻ b0map_`` means accepting either ``b0map`` or ``b0map_``. \
+  ``Δf ⊻ Δf_`` means accepting either ``Δf`` or ``Δf_``. \
   When used in specifying variable dimensions, it means the dimension tuple \
   can be one of the size tuple set, e.g. ``(N, nM ⊻ *Nd, xyz)`` means \
   accepting dimension either ``(N, nM, xyz)`` or ``(N, *Nd, xyz)``.
