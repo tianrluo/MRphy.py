@@ -146,6 +146,8 @@ def rfgr2beff(
     else:
         if b1Map.ndim == 1+len(Nd)+1:
             b1Map = b1Map[..., None]  # (N, *Nd, xy) -> (N, *Nd, xy, 1)
+        if rf.ndim == b1Map.ndim:  # rf missing the nCoil dim
+            rf = rf[..., None]
 
         b1Map = b1Map.to(device)
         b1Map = b1Map[..., None, :]  # -> (N, *Nd, xy, 1, nCoils)

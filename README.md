@@ -7,20 +7,21 @@ Yet a pytorch based Bloch simulator.
 [![Actions Status](https://github.com/tianrluo/MRphy.py/workflows/Python%20package/badge.svg)](https://github.com/tianrluo/MRphy.py/actions)
 
 Infrastructure of:\
-[Joint Design of RF and Gradient Waveforms via Auto-Differentiation for 3D Tailored Exitation in MRI](https://arxiv.org/abs/2008.10594)
+[Joint Design of RF and Gradient Waveforms via Auto-Differentiation for 3D Tailored Exitation in MRI](https://ieeexplore.ieee.org/document/9439482)\
+(arXiv: [https://arxiv.org/abs/2008.10594](https://arxiv.org/abs/2008.10594))
 
 cite as:
 
 ```bib
-@misc{luo2020joint,
-  title={Joint Design of RF and gradient waveforms via auto-differentiation for 3D tailored excitation in MRI},
-  author={Tianrui Luo and Douglas C. Noll and Jeffrey A. Fessler and Jon-Fredrik Nielsen},
-  year={2020},
-  eprint={2008.10594},
-  archivePrefix={arXiv},
-  primaryClass={eess.IV},
-  url={https://arxiv.org/abs/2008.10594}
-}
+@article{luo2021joint,
+  author={Luo, Tianrui and Noll, Douglas C. and Fessler, Jeffrey A. and Nielsen, Jon-Fredrik},
+  journal={IEEE Transactions on Medical Imaging}, 
+  title={Joint Design of RF and gradient waveforms via auto-differentiation for 3D tailored excitation in MRI}, 
+  year={2021},
+  volume={},
+  number={},
+  pages={1-1},
+  doi={10.1109/TMI.2021.3083104}}
 ```
 
 For the `interpT` feature, consider citing:
@@ -28,7 +29,7 @@ For the `interpT` feature, consider citing:
 @inproceedings{luo2021MultiScale,
   title={Multi-scale Accelerated Auto-differentiable Bloch-simulation based joint design of excitation RF and gradient waveforms},
   booktitle={ISMRM},
-  pages={0000},
+  pages={3958},
   author={Tianrui Luo and Douglas C. Noll and Jeffrey A. Fessler and Jon-Fredrik Nielsen},
   year={2021}
 }
