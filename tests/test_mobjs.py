@@ -85,7 +85,8 @@ class Test_mobjs:
         cube.Δf = torch.sum(-loc[0:1, :, :, :, 0:2], dim=-1) * γ
 
         Mres1a = cube.applypulse(p, doEmbed=True)
-        Mres1b = cube.applypulse(p, doEmbed=True, doRelax=False)
+        cube.applypulse(p, doEmbed=True, doRelax=False, doUpdate=True)
+        Mres1b = cube.M
 
         # assertion
         Mo0a = np.array(
@@ -111,16 +112,14 @@ class Test_mobjs:
 
     def test_PulseInterpT(self):
         dkw, atol = self.dkw, self.atol
-        γ, dt = self.γ, dt0  # For test coverage, not using self.dt here.
+        dt = dt0
         dt_n = dt*5
 
         nT, axis = 11, 2
         kind = 'linear'
         pulse_size = (1, 1, nT)
 
-        kw = {'num':nT, 'axis':axis}
-
-        f_0 = lambda x: np.dstack((np.zeros_like(x[:,:,[0]]), x))  # noqa: E731
+        kw = {'num': nT, 'axis': axis}
 
         # numpy raw data
         rf = 0.1*np.concatenate([np.linspace([[0.]], 1., **kw),

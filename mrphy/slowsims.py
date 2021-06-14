@@ -3,21 +3,19 @@ r"""Simulation codes with implicit Jacobian operations.
 
 import torch
 from torch import tensor, Tensor
-from typing import Optional
+from typing import Optional, Tuple
 
 from mrphy import γH, dt0, π
 from mrphy import utils, beffective
-
-# TODO:
-# - Allow Vo to be allocated outside `beff2uϕ`, `uϕrot` and `rfgr2beff`
 
 
 __all__ = ['blochsim_1step', 'blochsim', 'blochsim_ab']
 
 
 def blochsim_1step(
-        M: Tensor, M1: Tensor, b: Tensor,
-        E1: Tensor, E1_1: Tensor, E2: Tensor, γ2πdt: Tensor):
+    M: Tensor, M1: Tensor, b: Tensor,
+    E1: Tensor, E1_1: Tensor, E2: Tensor, γ2πdt: Tensor
+) -> Tuple[Tensor, Tensor]:
     r"""Single step bloch simulation
 
     Usage:
@@ -52,9 +50,10 @@ def blochsim_1step(
 
 
 def blochsim(
-        M: Tensor, Beff: Tensor,
-        T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
-        γ: Tensor = γH, dt: Tensor = dt0):
+    M: Tensor, Beff: Tensor,
+    T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
+    γ: Tensor = γH, dt: Tensor = dt0
+) -> Tensor:
     r"""Bloch simulator with implicit Jacobian operations.
 
     Usage:
@@ -107,7 +106,7 @@ def blochsim(
     return M
 
 
-def blochsim_ab(M: Tensor, A: Tensor, B: Tensor):
+def blochsim_ab(M: Tensor, A: Tensor, B: Tensor) -> Tensor:
     r"""Bloch simulation via Hargreave's mat/vec representation
 
     Usage:

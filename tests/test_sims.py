@@ -10,7 +10,7 @@ import time
 
 class Test_sims:
 
-    device = torch.device('cuda' if cuda.is_available() else 'cpu')
+    device = torch.device('cuda:1' if cuda.is_available() else 'cpu')
     # device = torch.device('cpu')
     # dtype, atol = torch.float32, 1e-4
     dtype, atol = torch.float64, 1e-9
@@ -26,7 +26,7 @@ class Test_sims:
         *Note*:
         This test relies on the correctness of `test_slowsims.py`.
         """
-        f_t2np = lambda x: x.detach().clone().cpu().numpy()
+        f_t2np = lambda x: x.detach().clone().cpu().numpy()  # noqa: E731
 
         print('\n')
         dkw, atol = self.dkw, self.atol
@@ -65,8 +65,8 @@ class Test_sims:
         beff.requires_grad = True
 
         # Check handling of 1-coil `rf`, `b1Map` that omitted the `nCoils` dim
-        beff_missing_dim = beffective.rfgr2beff(rf[...,0], gr, loc, Δf,
-                                                b1Map[...,0], γ)
+        beff_missing_dim = beffective.rfgr2beff(rf[..., 0], gr, loc, Δf,
+                                                b1Map[..., 0], γ)
 
         # %% sim
         print('\nblochsim tests:')
@@ -98,7 +98,7 @@ class Test_sims:
 
         # %% assertion
         assert(pytest.approx(f_t2np(beff), abs=atol)
-                             == f_t2np(beff_missing_dim))
+               == f_t2np(beff_missing_dim))
 
         assert(pytest.approx(grad_M0_1a, abs=atol) == grad_M0_2a)
         assert(pytest.approx(grad_beff_1a, abs=atol) == grad_beff_2a)
@@ -112,16 +112,25 @@ class Test_sims:
         grad_M0_1b = f_t2np(M0.grad)
         grad_beff_1b = f_t2np(beff.grad)
 
-        M0.grad, beff.grad = None, None
+        # dur_f, dur_b, n_repeat = 0., 0., 1000
+        dur_f, dur_b, n_repeat = 0., 0., 1
+        for _ in range(n_repeat):
+            M0.grad, beff.grad = None, None
 
-        t = time.time()
-        Mo_2b = sims.blochsim(M0, beff, T1=None, T2=None, γ=γ, dt=dt)
-        print('forward: sims.blochsim', time.time() - t)
+            t = time.time()
+            Mo_2b = sims.blochsim(M0, beff, T1=None, T2=None, γ=γ, dt=dt)
+            dur_f += time.time() - t
 
-        res2b = torch.sum(Mo_2b)
-        t = time.time()
-        res2b.backward()  # keep graph to check `bar.backward()`
-        print('backward: sims.blochsim', time.time() - t)
+            res2b = torch.sum(Mo_2b)
+
+            t = time.time()
+            res2b.backward()
+            dur_b += time.time() - t
+
+        # print('forward: sims.blochsim', time.time() - t)
+        print('forward: sims.blochsim', dur_f/n_repeat)
+
+        print('backward: sims.blochsim', dur_b/n_repeat)
         grad_M0_2b = f_t2np(M0.grad)
         grad_beff_2b = f_t2np(beff.grad)
 
@@ -130,7 +139,6 @@ class Test_sims:
         # %% assertion
         assert(pytest.approx(grad_M0_1b, abs=atol) == grad_M0_2b)
         assert(pytest.approx(grad_beff_1b, abs=atol) == grad_beff_2b)
-
 
 
 if __name__ == '__main__':

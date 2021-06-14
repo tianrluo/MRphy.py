@@ -4,7 +4,7 @@ r""" B-effective related functions
 import torch
 import torch.nn.functional as F
 from torch import tensor, Tensor
-from typing import Optional
+from typing import Optional, Tuple
 
 from mrphy import γH, dt0, π
 from mrphy import utils
@@ -16,7 +16,7 @@ from mrphy import utils
 __all__ = ['beff2ab', 'beff2uφ', 'rfgr2beff']
 
 
-def beff2uϕ(beff: Tensor, γ2πdt: Tensor, dim=-1):
+def beff2uϕ(beff: Tensor, γ2πdt: Tensor, dim=-1) -> Tuple[Tensor, Tensor]:
     r"""Compute rotation axes and angles from B-effectives
 
     Usage:
@@ -39,9 +39,10 @@ def beff2uϕ(beff: Tensor, γ2πdt: Tensor, dim=-1):
 
 
 def beff2ab(
-        beff: Tensor,
-        E1: Tensor = tensor(0.), E2: Tensor = tensor(0.),
-        γ: Tensor = γH, dt: Tensor = dt0):
+    beff: Tensor,
+    E1: Tensor = tensor(0.), E2: Tensor = tensor(0.), γ: Tensor = γH,
+    dt: Tensor = dt0
+) -> Tuple[Tensor, Tensor]:
     r"""Compute Hargreave's 𝐴/𝐵, mat/vec, from B-effectives
 
     See: `doi:10.1002/mrm.1170 <https://doi.org/10.1002/mrm.1170>`_.
@@ -103,9 +104,9 @@ def beff2ab(
 
 
 def rfgr2beff(
-        rf: Tensor, gr: Tensor, loc: Tensor,
-        Δf: Optional[Tensor] = None, b1Map: Optional[Tensor] = None,
-        γ: Tensor = γH):
+    rf: Tensor, gr: Tensor, loc: Tensor,
+    Δf: Optional[Tensor] = None, b1Map: Optional[Tensor] = None, γ: Tensor = γH
+) -> Tensor:
     r"""Compute B-effectives from rf and gradients
 
     Usage:

@@ -3,7 +3,7 @@ r"""MRphy utilities
 Utilities for data indexing, conversions, spin rotation.
 """
 
-from typing import Tuple, Union
+from typing import Any, Tuple, Union
 from numbers import Number
 
 import torch
@@ -24,7 +24,7 @@ __all__ = ['ctrsub', 'g2k', 'g2s', 'k2g', 'rf_c2r', 'rf_r2c', 'rf2tρθ',
            'rfclamp', 's2g', 's2ts', 'sclamp', 'ts2s', 'tρθ2rf', 'uφrot']
 
 
-def ctrsub(shape):
+def ctrsub(shape: Any) -> Any:
     r"""Compute center subscript indices of a regular grid
 
     Usage:
@@ -285,7 +285,7 @@ def tρθ2rf(tρ: Tensor, θ: Tensor, rfmax: Tensor) -> Tensor:
     return tρ.atan()/π*2*rfmax*torch.cat((θ.cos(), θ.sin()), dim=1)
 
 
-def uϕrot(U: Tensor, Φ: Tensor, Vi: Tensor):
+def uϕrot(U: Tensor, Φ: Tensor, Vi: Tensor) -> Tensor:
     r"""Rotate Vi about axis U by Φ
 
     Usage:
