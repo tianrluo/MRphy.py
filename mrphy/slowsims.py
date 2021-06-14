@@ -8,9 +8,6 @@ from typing import Optional
 from mrphy import γH, dt0, π
 from mrphy import utils, beffective
 
-# TODO:
-# - Allow Vo to be allocated outside `beff2uϕ`, `uϕrot` and `rfgr2beff`
-
 
 __all__ = ['blochsim_1step', 'blochsim', 'blochsim_ab']
 

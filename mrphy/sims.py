@@ -36,11 +36,10 @@ class BlochSim(Function):
               [0 0 1]
             - ``Beff``: `(N, *Nd, xyz, nT)`, "Gauss", B-effective, magnetic \
               field.
-        Optionals:
-            - ``T1``: `(N, *Nd,)`, "Sec", T1 relaxation.
-            - ``T2``: `(N, *Nd,)`, "Sec", T2 relaxation.
-            - ``γ``:  `(N, *Nd,)`, "Hz/Gauss", gyro ratio.
-            - ``dt``: `(N, 1,)`, "Sec", dwell time.
+            - ``T1``: `(N ⊻ 1, *Nd ⊻ len(Nd)*(1,), 1, 1)`, "Sec", T₁
+            - ``T2``: `(N ⊻ 1, *Nd ⊻ len(Nd)*(1,), 1, 1)`, "Sec", T₂
+            - ``γ``:  `(N ⊻ 1, *Nd ⊻ len(Nd)*(1,), 1, 1)`, "Hz/Gauss", gyro.
+            - ``dt``: `(N ⊻ 1, len(Nd)*(1,), 1, 1)`, "Sec", dwell time.
         Outputs:
             - ``Mo``: `(N, *Nd, xyz)`, Magetic spins after simulation.
         """
@@ -237,7 +236,7 @@ def blochsim(
     assert(Mi.shape[:-1] == Beff.shape[:-2])
     Beff, ndim = Beff.to(Mi.device), Beff.ndim
 
-    # (N, *Nd, :, :) compatible for {γ, dt, T1, T2}
+    # Make {γ, dt, T1, T2} compatible with (N, *Nd, :, :)
     γ, dt = (x.reshape(x.shape+(ndim-x.ndim)*(1,)) for x in (γ, dt))
 
     assert((T1 is None) == (T2 is None))  # both or neither
