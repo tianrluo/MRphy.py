@@ -240,6 +240,31 @@
 </dl>
 </dd></dl>
 
+<dl class="py function">
+<dt class="sig sig-object py" id="mrphy.slowsims.freeprec">
+<span class="sig-prename descclassname"><span class="pre">mrphy.slowsims.</span></span><span class="sig-name descname"><span class="pre">freeprec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">M</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dur</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T1</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">T2</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Δf</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">torch.Tensor</span><a class="headerlink" href="#mrphy.slowsims.freeprec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Isochromats free precession with given relaxation and off-resonance</p>
+<dl class="simple">
+<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">freeprec(M,</span> <span class="pre">dur;</span> <span class="pre">T1,</span> <span class="pre">T2,</span> <span class="pre">Δf)</span></code></p>
+</dd>
+<dt>Inputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: <cite>(N, *Nd, xyz)</cite>, Magnetic spins, assumed equilibrium magnitude [0 0 1]</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dur</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1,)</cite>, “Sec”, duration of free-precession.</p></li>
+</ul>
+</dd>
+<dt>OPTIONALS:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">T1</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1, *Nd ⊻ 1,)</cite>, “Sec”, T1 relaxation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">T2</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1, *Nd ⊻ 1,)</cite>, “Sec”, T2 relaxation.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Δf</span></code>: <cite>(N ⊻ 1, *Nd ⊻ 1,)</cite>, “Hz”, off-resonance.</p></li>
+</ul>
+</dd>
+<dt>Outputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code>: <cite>(N, *Nd, xyz)</cite>, Result magnetic spins</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 </div>
 
 
