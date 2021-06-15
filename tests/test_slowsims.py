@@ -95,7 +95,33 @@ class Test_slowsims:
         assert(rf_grad1 == pytest.approx(rf_grad2, abs=atol))
         assert(gr_grad1 == pytest.approx(gr_grad2, abs=atol))
 
+        return
+
+    def test_freeprec(self):
+
+        dkw, atol = self.dkw, self.atol
+
+        # spins  # (1,nM,xyz)
+        Mi = tensor([[[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]], **dkw)
+
+        E1, E2 = tensor([[0.5]], **dkw), tensor([[0.5]], **dkw)  # (1,1)
+
+        # scalar dur, T1, T2
+        dur = torch.tensor(0.5, **dkw)
+        T1, T2 = -dur/torch.log(E1), -dur/torch.log(E2)  # ()
+
+        Δf = tensor([[1/4/dur, -1/4/dur, 1]], **dkw)  # (1, nM) quater-circle
+
+        Mo = slowsims.freeprec(Mi, dur, T1=T1, T2=T2, Δf=Δf)
+
+        Mo0 = np.array([[[0., -0.5, 0.5], [-0.5, 0, 0.5], [0., 0., 1.]]])
+        Mref = pytest.approx(Mo0, abs=atol)
+
+        assert(self.np(Mo) == Mref)
+        return
+
 
 if __name__ == '__main__':
     tmp = Test_slowsims()
     tmp.test_blochsims()
+    tmp.test_freeprec()
