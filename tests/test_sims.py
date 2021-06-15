@@ -26,7 +26,7 @@ class Test_sims:
         *Note*:
         This test relies on the correctness of `test_slowsims.py`.
         """
-        f_t2np = lambda x: x.detach().clone().cpu().numpy()
+        f_t2np = lambda x: x.detach().clone().cpu().numpy()  # noqa: E731
 
         print('\n')
         dkw, atol = self.dkw, self.atol
@@ -65,8 +65,8 @@ class Test_sims:
         beff.requires_grad = True
 
         # Check handling of 1-coil `rf`, `b1Map` that omitted the `nCoils` dim
-        beff_missing_dim = beffective.rfgr2beff(rf[...,0], gr, loc, Δf,
-                                                b1Map[...,0], γ)
+        beff_missing_dim = beffective.rfgr2beff(rf[..., 0], gr, loc, Δf,
+                                                b1Map[..., 0], γ)
 
         # %% sim
         print('\nblochsim tests:')
@@ -98,7 +98,7 @@ class Test_sims:
 
         # %% assertion
         assert(pytest.approx(f_t2np(beff), abs=atol)
-                             == f_t2np(beff_missing_dim))
+               == f_t2np(beff_missing_dim))
 
         assert(pytest.approx(grad_M0_1a, abs=atol) == grad_M0_2a)
         assert(pytest.approx(grad_beff_1a, abs=atol) == grad_beff_2a)
@@ -130,7 +130,6 @@ class Test_sims:
         # %% assertion
         assert(pytest.approx(grad_M0_1b, abs=atol) == grad_M0_2b)
         assert(pytest.approx(grad_beff_1b, abs=atol) == grad_beff_2b)
-
 
 
 if __name__ == '__main__':

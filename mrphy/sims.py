@@ -25,9 +25,9 @@ class BlochSim(Function):
 
     @staticmethod
     def forward(
-            ctx: CTX, Mi: Tensor, Beff: Tensor,
-            T1: Optional[Tensor], T2: Optional[Tensor],
-            γ: Tensor, dt: Tensor) -> Tensor:
+        ctx: CTX, Mi: Tensor, Beff: Tensor,
+        T1: Optional[Tensor], T2: Optional[Tensor], γ: Tensor, dt: Tensor
+    ) -> Tensor:
         r"""Forward evolution of Bloch simulation
 
         Inputs:
@@ -93,8 +93,9 @@ class BlochSim(Function):
         return Mo
 
     @staticmethod
-    def backward(ctx: CTX, grad_Mo: Tensor
-                 ) -> Tuple[Tensor, Tensor, None, None, None, None]:
+    def backward(
+        ctx: CTX, grad_Mo: Tensor
+    ) -> Tuple[Tensor, Tensor, None, None, None, None]:
         r"""Backward evolution of Bloch simulation Jacobians
 
         Inputs:
@@ -204,9 +205,10 @@ class BlochSim(Function):
 
 
 def blochsim(
-        Mi: Tensor, Beff: Tensor,
-        T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
-        γ: Tensor = γH, dt: Tensor = dt0) -> Tensor:
+    Mi: Tensor, Beff: Tensor,
+    T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
+    γ: Tensor = γH, dt: Tensor = dt0
+) -> Tensor:
     r"""Bloch simulator with explicit Jacobian operation.
 
     Setting `T1=T2=None` to opt for simulation ignoring relaxation.

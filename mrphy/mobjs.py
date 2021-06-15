@@ -63,13 +63,14 @@ class Pulse(object):
     __slots__ = set(_readonly + _limits + ('rf', 'gr', 'dt', 'desc'))
 
     def __init__(
-            self,
-            rf: Optional[Tensor] = None, gr: Optional[Tensor] = None,
-            dt: Tensor = dt0,
-            gmax: Tensor = gmax0, smax: Tensor = smax0, rfmax: Tensor = rfmax0,
-            desc: str = "generic pulse",
-            device: torch.device = torch.device('cpu'),
-            dtype: torch.dtype = torch.float32):
+        self,
+        rf: Optional[Tensor] = None, gr: Optional[Tensor] = None,
+        dt: Tensor = dt0,
+        gmax: Tensor = gmax0, smax: Tensor = smax0, rfmax: Tensor = rfmax0,
+        desc: str = "generic pulse",
+        device: torch.device = torch.device('cpu'),
+        dtype: torch.dtype = torch.float32
+    ):
 
         assert(isinstance(device, torch.device) and
                isinstance(dtype, torch.dtype))
@@ -297,13 +298,14 @@ class SpinArray(object):
     __slots__ = set(_readonly + _compact)
 
     def __init__(
-            self, shape: tuple, mask: Optional[Tensor] = None,
-            T1: Optional[Tensor] = None, T1_: Optional[Tensor] = None,
-            T2: Optional[Tensor] = None, T2_: Optional[Tensor] = None,
-            γ: Optional[Tensor] = None,  γ_: Optional[Tensor] = None,
-            M: Optional[Tensor] = None,  M_: Optional[Tensor] = None,
-            device: torch.device = torch.device('cpu'),
-            dtype: torch.dtype = torch.float32):
+        self, shape: tuple, mask: Optional[Tensor] = None,
+        T1: Optional[Tensor] = None, T1_: Optional[Tensor] = None,
+        T2: Optional[Tensor] = None, T2_: Optional[Tensor] = None,
+        γ: Optional[Tensor] = None,  γ_: Optional[Tensor] = None,
+        M: Optional[Tensor] = None,  M_: Optional[Tensor] = None,
+        device: torch.device = torch.device('cpu'),
+        dtype: torch.dtype = torch.float32
+    ):
 
         mask = (torch.ones((1,)+shape[1:], dtype=torch.bool, device=device)
                 if mask is None else mask.to(device=device))
@@ -380,12 +382,12 @@ class SpinArray(object):
         return
 
     def applypulse(
-            self, pulse: Pulse, doEmbed: bool = False, doRelax: bool = True,
-            doUpdate: bool = False,
-            loc: Optional[Tensor] = None, loc_: Optional[Tensor] = None,
-            Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
-            b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
-            ) -> Tensor:
+        self, pulse: Pulse,
+        doEmbed: bool = False, doRelax: bool = True, doUpdate: bool = False,
+        loc: Optional[Tensor] = None, loc_: Optional[Tensor] = None,
+        Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
+        b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
+    ) -> Tensor:
         r"""Apply a pulse to the spinarray object
 
         Typical usage:
@@ -566,11 +568,11 @@ class SpinArray(object):
         return self.mask.numel()
 
     def pulse2beff(
-            self, pulse: Pulse, doEmbed: bool = False,
-            loc: Optional[Tensor] = None, loc_: Optional[Tensor] = None,
-            Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
-            b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
-            ) -> Tensor:
+        self, pulse: Pulse, doEmbed: bool = False,
+        loc: Optional[Tensor] = None, loc_: Optional[Tensor] = None,
+        Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
+        b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
+    ) -> Tensor:
         r"""Compute B-effective of ``pulse`` with the spinarray's parameters
 
         Typical usage:
@@ -613,8 +615,11 @@ class SpinArray(object):
         """
         return self.shape
 
-    def to(self, device: torch.device = torch.device('cpu'),
-           dtype: torch.dtype = torch.float32) -> SpinArray:
+    def to(
+        self,
+        device: torch.device = torch.device('cpu'),
+        dtype: torch.dtype = torch.float32
+    ) -> SpinArray:
         r"""Duplicate the object to the prescribed device with dtype
 
         Usage:
@@ -665,15 +670,16 @@ class SpinCube(object):
     __slots__ = set(_readonly+_compact+('fov', 'ofst'))
 
     def __init__(
-            self, shape: tuple, fov: Tensor, mask: Optional[Tensor] = None,
-            ofst: Tensor = tensor([[0., 0., 0.]]),
-            Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
-            T1: Optional[Tensor] = None, T1_: Optional[Tensor] = None,
-            T2: Optional[Tensor] = None, T2_: Optional[Tensor] = None,
-            γ: Optional[Tensor] = None,  γ_: Optional[Tensor] = None,
-            M: Optional[Tensor] = None,  M_: Optional[Tensor] = None,
-            device: torch.device = torch.device('cpu'),
-            dtype: torch.dtype = torch.float32):
+        self, shape: tuple, fov: Tensor, mask: Optional[Tensor] = None,
+        ofst: Tensor = tensor([[0., 0., 0.]]),
+        Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None,
+        T1: Optional[Tensor] = None, T1_: Optional[Tensor] = None,
+        T2: Optional[Tensor] = None, T2_: Optional[Tensor] = None,
+        γ: Optional[Tensor] = None,  γ_: Optional[Tensor] = None,
+        M: Optional[Tensor] = None,  M_: Optional[Tensor] = None,
+        device: torch.device = torch.device('cpu'),
+        dtype: torch.dtype = torch.float32
+    ):
         sp = SpinArray(shape, mask, T1=T1, T1_=T1_, T2=T2, T2_=T2_, γ=γ, γ_=γ_,
                        M=M, M_=M_, device=device, dtype=dtype)
         super().__setattr__('spinarray', sp)
@@ -762,10 +768,10 @@ class SpinCube(object):
         return
 
     def applypulse(
-            self, pulse: Pulse, doEmbed: bool = False, doRelax: bool = True,
-            doUpdate: bool = False,
-            b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
-            ) -> Tensor:
+        self, pulse: Pulse,
+        doEmbed: bool = False, doRelax: bool = True, doUpdate: bool = False,
+        b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
+    ) -> Tensor:
         r"""Apply a pulse to the spincube object
 
         Usage:
@@ -894,9 +900,10 @@ class SpinCube(object):
         return self.spinarray.numel()
 
     def pulse2beff(
-            self, pulse: Pulse, doEmbed: bool = False,
-            b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
-            ) -> Tensor:
+        self, pulse: Pulse,
+        doEmbed: bool = False,
+        b1Map: Optional[Tensor] = None, b1Map_: Optional[Tensor] = None
+    ) -> Tensor:
         r"""Compute B-effective of ``pulse`` with the spincube's parameters
 
         Typical usage:
@@ -925,8 +932,11 @@ class SpinCube(object):
         """
         return self.spinarray.size()
 
-    def to(self, device: torch.device = torch.device('cpu'),
-           dtype: torch.dtype = torch.float32) -> SpinCube:
+    def to(
+        self,
+        device: torch.device = torch.device('cpu'),
+        dtype: torch.dtype = torch.float32
+    ) -> SpinCube:
         r"""Duplicate the object to the prescribed device with dtype
 
         Usage:
