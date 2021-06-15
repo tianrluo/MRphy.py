@@ -299,3 +299,128 @@ def blochsim(
         T1, T2 = (x.reshape(x.shape+(ndim-x.ndim)*(1,)) for x in (T1, T2))
 
     return BlochSim.apply(Mi, Beff, T1, T2, γ, dt)
+
+
+class FreePrec(Function):
+    r"""Free precession with explicit Jacobian operation (backward)
+
+    This operator is only differentiable w.r.t. ``Mi``.
+
+    """
+
+    @staticmethod
+    def forward(
+        ctx: CTX, Mi: Tensor, dur: Tensor,
+        T1: Optional[Tensor], T2: Optional[Tensor], Δf: Optional[Tensor]
+    ) -> Tensor:
+        r"""Forward operation of free precession
+
+        Inputs:
+            - ``ctx``: `(1,)`, pytorch CTX cacheing object
+            - ``Mi``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium \
+              [0 0 1]
+            - ``dur``: `(N ⊻ 1, len(Nd)*(1,), 1, 1)`, "Sec", dwell time.
+            - ``T1``: `(N ⊻ 1, *Nd ⊻ len(Nd)*(1,), 1, 1)`, "Sec", T₁
+            - ``T2``: `(N ⊻ 1, *Nd ⊻ len(Nd)*(1,), 1, 1)`, "Sec", T₂
+            - ``Δf``: `(N ⊻ 1, *Nd ⊻ len(Nd)*(1,), 1, 1)`, "Sec", T₂
+        Outputs:
+            - ``Mo``: `(N, *Nd, xyz)`, Magetic spins after simulation.
+        """  # could we learn to live right.
+
+        Mo = torch.empty_like(Mi)
+
+        # Precession
+        cϕ = sϕ = None
+        if Δf is not None:
+            sϕ = -(2*π)*Δf*dur  # positive Δf dephases clock-wise/negatively
+            cϕ = torch.cos(sϕ)
+            sϕ.sin_()  # ϕ is now sϕ
+            # Essentially Mox, Moy = cϕ*Mix-sϕMiy, sϕ*Mix+cϕ*Miy
+            torch.mul(cϕ, Mi[..., 0:2], out=Mo[..., 0:2])
+            torch.mul(cϕ, Mi[..., 0], out=Mo[..., 0])
+            torch.mul(sϕ, Mi[..., 1], out=Mo[..., 2])
+            torch.sub(Mo[..., 0], Mo[..., 2], out=Mo[..., 0])
+
+            torch.mul(sϕ, Mi[..., 0], out=Mo[..., 1])
+            torch.mul(cϕ, Mi[..., 1], out=Mo[..., 2])
+            torch.add(Mo[..., 1], Mo[..., 2], out=Mo[..., 1])
+
+        # Relaxation
+        E1 = E2 = E1_1 = None
+        assert((T1 is None) == (T2 is None))  # both or neither
+
+        if T1 is not None:
+            E1, E2 = -dur/T1, -dur/T2
+            E1_1 = torch.expm1(E1)  # E1 - 1
+            E1.exp_(), E2.exp_()  # should have fewer alloc than exp(-dt/T1)
+            Mo[..., 0:2].mul_(E2)
+            Mo[..., 2:3].mul_(E1).sub_(E1_1)
+
+        ctx.save_for_backward(cϕ, sϕ, E1, E2, E1_1)
+
+        return Mo
+
+    @staticmethod
+    def backward(
+        ctx: CTX, grad_Mo: Tensor
+    ) -> Tuple[Tensor, None, None, None, None]:
+        r"""Backward operation of free precession
+
+        Inputs:
+            - ``ctx``: `(1,)`, pytorch CTX cacheing object
+            - ``grad_Mo``: `(N, *Nd, xyz)`, derivative w.r.t. output Magetic \
+              spins.
+        Outputs:
+            - ``grad_Mi``: `(N, *Nd, xyz)`, derivative w.r.t. input Magetic \
+              spins.
+            - None*4, this implemendation do not provide derivatives w.r.t.: \
+              `dur`, `T1`, `T2`, and `Δf`.
+        """  # If we turn back time,
+        # grads of configuration variables are not supported yet
+        needs_grad = ctx.needs_input_grad
+        grad_Mi = grad_dur = grad_T1 = grad_T2 = grad_Δf = None
+
+        if not any(needs_grad[0:1]):
+            return grad_Mi, grad_dur, grad_T1, grad_T2, grad_Δf
+
+        grad_Mi = grad_Mo
+        # ctx.save_for_backward(cϕ, sϕ, E1, E2, E1_1)
+        cϕ, sϕ, E1, E2, E1_1 = ctx.saved_tensors
+        return grad_Mi
+
+
+def freeprec(
+    Mi: Tensor, dur: Tensor, *,
+    T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
+    Δf: Optional[Tensor] = None
+) -> Tensor:
+    r"""Isochromats free precession with given relaxation and off-resonance
+
+    This function is only differentiable w.r.t. ``Mi``.
+
+    Setting `T1=T2=None` to opt for simulation ignoring relaxation.
+
+    Usage:
+        ``Mo = freeprec(Mi, dur, *, T1, T2, Δf)``
+    Inputs:
+        - ``Mi``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium \
+          magnitude [0 0 1]
+        - ``dur``: `()` ⊻ `(N ⊻ 1,)`, "Sec", duration of free-precession.
+    OPTIONALS:
+        - ``T1``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T1 relaxation.
+        - ``T2``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T2 relaxation.
+        - ``Δf``: `(N ⊻ 1, *Nd ⊻ 1,)`, "Hz", off-resonance.
+    Outputs:
+        - ``Mo``: `(N, *Nd, xyz)`, Result magnetic spins
+    """
+    ndim = Mi.ndim  # dur, T1, T2, Δf are reshaped to be compatible w/ M
+    dur = dur.reshape(dur.shape+(ndim-dur.ndim)*(1,))
+
+    assert((T1 is None) == (T2 is None))  # both or neither
+    if T1 is not None:
+        T1, T2 = (x.reshape(x.shape+(ndim-x.ndim)*(1,)) for x in (T1, T2))
+
+    if Δf is not None:
+        Δf = Δf.reshape(Δf.shape+(ndim-Δf.ndim)*(1,))
+
+    return FreePrec.apply(Mi, dur, T1, T2, Δf)

@@ -547,6 +547,39 @@ class SpinArray(object):
         # out_.copy_(v[mask].reshape((-1,)+v.shape[self.ndim:]))
         return out_
 
+    def freeprec(
+        self, dur: Tensor, *,
+        doEmbed: bool = False, doUpdate: bool = False,
+        Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None
+    ) -> Tensor:
+        r"""Free precession of duration ``dur``
+
+        Typical usage:
+            ``M = spinarray.freeprec(dur, *, doEmbed=True, doRelax, Δf)``
+            ``M_ = spinarray.applypulse(dur, *, doEmbed=False, doRelax, Δf_)``
+        Inputs:
+            - ``dur``: `()` ⊻ `(N ⊻ 1,)`, "Sec", duration of free-precession.
+        Optionals:
+            - ``doEmbed``: [t/F], return ``M`` or ``M_``
+            - ``doRelax``: [T/f], do relaxation during Bloch simulation.
+            - ``doUpdate``: [t/F], update ``self.M_``
+            - ``Δf``⊻ ``Δf_``: `(N ⊻ 1,*Nd ⊻ nM)`, "Hz", off-resonance.
+        Outputs:
+            - ``M`` ⊻ ``M_``: `(N,*Nd ⊻ nM,xyz)`
+
+        .. note::
+            When ``doUpdate == True and doEmbed == False``, the output compact
+            magnetization Tensor is a reference to ``self.M_``, and needs
+            caution when being accessed.
+        """
+        assert ((Δf_ is None) or (Δf is None))
+        Δf_ = (Δf_ if Δf is None else self.extract(Δf))
+
+        if doUpdate:
+            self.M_ = M_
+        M_ = (self.embed(M_) if doEmbed else M_)
+        return M_
+
     def mask_(self, *, mask: Tensor) -> Tensor:
         r"""Extract the compact region of an input external ``mask``.
 
