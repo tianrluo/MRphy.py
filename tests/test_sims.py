@@ -10,7 +10,7 @@ import time
 
 class Test_sims:
 
-    device = torch.device('cuda' if cuda.is_available() else 'cpu')
+    device = torch.device('cuda:1' if cuda.is_available() else 'cpu')
     # device = torch.device('cpu')
     # dtype, atol = torch.float32, 1e-4
     dtype, atol = torch.float64, 1e-9
@@ -112,18 +112,25 @@ class Test_sims:
         grad_M0_1b = f_t2np(M0.grad)
         grad_beff_1b = f_t2np(beff.grad)
 
-        M0.grad, beff.grad = None, None
+        # dur_f, dur_b, n_repeat = 0., 0., 1000
+        dur_f, dur_b, n_repeat = 0., 0., 1
+        for _ in range(n_repeat):
+            M0.grad, beff.grad = None, None
 
-        t = time.time()
-        Mo_2b = sims.blochsim(M0, beff, T1=None, T2=None, γ=γ, dt=dt)
-        print('forward: sims.blochsim', time.time() - t)
+            t = time.time()
+            Mo_2b = sims.blochsim(M0, beff, T1=None, T2=None, γ=γ, dt=dt)
+            dur_f += time.time() - t
 
-        res2b = torch.sum(Mo_2b)
+            res2b = torch.sum(Mo_2b)
 
-        t = time.time()
-        res2b.backward()
+            t = time.time()
+            res2b.backward()
+            dur_b += time.time() - t
 
-        print('backward: sims.blochsim', time.time() - t)
+        # print('forward: sims.blochsim', time.time() - t)
+        print('forward: sims.blochsim', dur_f/n_repeat)
+
+        print('backward: sims.blochsim', dur_b/n_repeat)
         grad_M0_2b = f_t2np(M0.grad)
         grad_beff_2b = f_t2np(beff.grad)
 
