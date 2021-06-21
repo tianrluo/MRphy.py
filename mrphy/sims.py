@@ -21,6 +21,9 @@ __all__ = ['blochsim']
 
 class BlochSim(Function):
     r"""BlochSim with explict Jacobian operation (backward)
+
+    This operator is only differentiable w.r.t. ``Mi`` and ``Beff``.
+
     """
 
     @staticmethod
@@ -44,10 +47,13 @@ class BlochSim(Function):
             - ``Mo``: `(N, *Nd, xyz)`, Magetic spins after simulation.
         """
         NNd, nT = Beff.shape[:-2], Beff.shape[-1]
+        # (t)ensor (k)ey(w)ord, contiguous to avoid alloc/copy when reshape
+        tkw = {'memory_format': torch.contiguous_format,
+               'dtype': Mi.dtype, 'device': Mi.device}
 
         # %% Preprocessing
         γ2πdt = 2*π*γ*dt
-        Mi = Mi.clone()  # isolate
+        Mi = Mi.clone(memory_format=torch.contiguous_format)[..., None]
         γBeff = γ2πdt*Beff
 
         assert((T1 is None) == (T2 is None))  # both or neither
@@ -56,17 +62,18 @@ class BlochSim(Function):
             E = e1_1 = None
             fn_relax_ = lambda m1: None  # noqa: E731
         else:
-            E1, E2 = torch.exp(-dt/T1), torch.exp(-dt/T2)
+            E1, E2 = -dt/T1, -dt/T2
+            E1.exp_(), E2.exp_()  # should have fewer alloc than exp(-dt/T1)
             E, e1_1 = torch.cat((E2, E2, E1), dim=-2), E1-1
             fn_relax_ = lambda m1: (m1.mul_(E)  # noqa: E731
                                     )[..., 2:3, :].sub_(e1_1)
 
         # Pre-allocate intermediate variables, in case of overhead alloc's
-        u = γBeff.new_empty(NNd+(3, 1))
-        ϕ, cϕ, sϕ = (γBeff.new_empty(NNd+(1, 1)) for _ in range(3))
+        u = torch.empty(Mi.shape, **tkw)  # (N, *Nd, xyz, 1)
+        ϕ, cϕ_1, sϕ = (torch.empty(NNd+(1, 1), **tkw) for _ in range(3))
 
         # %% Other variables to be cached
-        m0, Mhst = Mi[..., None], γBeff.new_empty(NNd+(3, nT))
+        m0, Mhst = Mi, torch.empty(NNd+(3, nT), **tkw)
 
         # %% Simulation. could we learn to live right.
         for m1, γbeff in zip(Mhst.split(1, dim=-1), γBeff.split(1, dim=-1)):
@@ -75,13 +82,22 @@ class BlochSim(Function):
             ϕ.clamp_(min=1e-12)
             torch.div(γbeff, ϕ, out=u)
 
-            torch.cos(ϕ, out=cϕ), torch.sin(ϕ, out=sϕ)
-            utm0 = ϕ  # ϕ reused uᵀm₀
-            torch.sum(u*m0, dim=-2, keepdim=True, out=utm0)
+            torch.sin(ϕ, out=sϕ)
+            torch.cos(ϕ, out=cϕ_1)
+            cϕ_1.sub_(1)  # (cϕ-1)
+
             # wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
             # m₁ = cϕ*m₀ + (1-cϕ)*uᵀm₀*u - sϕ*u×m₀
-            torch.cross(u, m0, dim=-2, out=m1)
-            m1.mul_(-sϕ).add_(cϕ*m0+(1-cϕ)*utm0*u)  # -sϕ: BxM -> MxB
+            # m₁ = m₀ - sϕ*u×m₀ + (cϕ-1)*(m₀ - uᵀm₀*u), in-place friendly
+            torch.mul(u, m0, out=m1)  # using m₁ as an temporary storage
+            torch.sum(m1, dim=-2, keepdim=True, out=ϕ)  # ϕ reused as uᵀm₀
+
+            torch.cross(u, m0, dim=-2, out=m1)  # u×m₀
+            torch.addcmul(m0, sϕ, m1, value=-1, out=m1)  # m₀ - sϕ*(u×m₀)
+
+            torch.addcmul(m0, ϕ, u, value=-1, out=u)  # m₀ - uᵀm₀*u
+
+            torch.addcmul(m1, cϕ_1, u, out=m1)  # m₀-sϕ*u×m₀+(cϕ-1)*(m₀-uᵀm₀*u)
 
             # Relaxation
             fn_relax_(m1)
@@ -120,7 +136,6 @@ class BlochSim(Function):
         # ctx.save_for_backward(Mhst, γBeff, E, e1_1, γ2πdt)
         Mi, Mhst, γBeff, E, e1_1, γ2πdt = ctx.saved_tensors
         NNd = γBeff.shape[:-2]
-        Mi = Mi[..., None]  # (N, *Nd, xyz, 1)
 
         # assert((E is None) == (e1_1 is None))  # both or neither
         if E is None:  # relaxations ignored
@@ -210,6 +225,8 @@ def blochsim(
     γ: Tensor = γH, dt: Tensor = dt0
 ) -> Tensor:
     r"""Bloch simulator with explicit Jacobian operation.
+
+    This function is only differentiable w.r.t. ``Mi`` and ``Beff``.
 
     Setting `T1=T2=None` to opt for simulation ignoring relaxation.
 

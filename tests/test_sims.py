@@ -119,8 +119,10 @@ class Test_sims:
         print('forward: sims.blochsim', time.time() - t)
 
         res2b = torch.sum(Mo_2b)
+
         t = time.time()
-        res2b.backward()  # keep graph to check `bar.backward()`
+        res2b.backward()
+
         print('backward: sims.blochsim', time.time() - t)
         grad_M0_2b = f_t2np(M0.grad)
         grad_beff_2b = f_t2np(beff.grad)
