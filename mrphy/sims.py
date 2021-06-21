@@ -54,7 +54,9 @@ class BlochSim(Function):
         # %% Preprocessing
         γ2πdt = 2*π*γ*dt
         Mi = Mi.clone(memory_format=torch.contiguous_format)[..., None]
-        γBeff = γ2πdt*Beff
+        γBeff = torch.empty(Beff.shape, **tkw)
+        torch.mul(γ2πdt, Beff, out=γBeff)
+        # γBeff = γ2πdt*Beff.contiguous()
 
         assert((T1 is None) == (T2 is None))  # both or neither
 
@@ -86,8 +88,12 @@ class BlochSim(Function):
             torch.cos(ϕ, out=cϕ_1)
             cϕ_1.sub_(1)  # (cϕ-1)
 
+            ϕ.clamp_(min=1e-12)
+            torch.div(γbeff, ϕ, out=u)
+
             # wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
-            # m₁ = cϕ*m₀ + (1-cϕ)*uᵀm₀*u - sϕ*u×m₀
+            # Angle is `-ϕ` as Bloch-eq is 𝑀×𝐵
+            # m₁ = R(u, -ϕ)m₀ = cϕ*m₀ + (1-cϕ)*uᵀm₀*u - sϕ*u×m₀
             # m₁ = m₀ - sϕ*u×m₀ + (cϕ-1)*(m₀ - uᵀm₀*u), in-place friendly
             torch.mul(u, m0, out=m1)  # using m₁ as an temporary storage
             torch.sum(m1, dim=-2, keepdim=True, out=ϕ)  # ϕ reused as uᵀm₀
@@ -133,9 +139,12 @@ class BlochSim(Function):
             return grad_Mi, grad_Beff, grad_T1, grad_T2, grad_γ, grad_dt
 
         # %% Jacobians. If we turn back time,
-        # ctx.save_for_backward(Mhst, γBeff, E, e1_1, γ2πdt)
+        # ctx.save_for_backward(Mi, Mhst, γBeff, E, e1_1, γ2πdt)
         Mi, Mhst, γBeff, E, e1_1, γ2πdt = ctx.saved_tensors
         NNd = γBeff.shape[:-2]
+        # (t)ensor (k)ey(w)ord, contiguous to avoid alloc/copy when reshape
+        tkw = {'memory_format': torch.contiguous_format,
+               'dtype': Mi.dtype, 'device': Mi.device}
 
         # assert((E is None) == (e1_1 is None))  # both or neither
         if E is None:  # relaxations ignored
@@ -150,71 +159,100 @@ class BlochSim(Function):
                 return
 
         # Pre-allocate intermediate variables, in case of overhead alloc's
-        h0, h1 = γBeff.new_empty(NNd+(3, 1)), (grad_Mo.clone())[..., None]
-        uxh1, m0xh1 = (γBeff.new_empty(NNd+(3, 1)) for _ in range(2))
-        ϕ, cϕ, sϕ, utm0, uth1 = (γBeff.new_empty(NNd+(1, 1)) for _ in range(5))
-        ϕis0 = γBeff.new_empty(NNd+(1, 1), dtype=torch.bool)
+        h0 = torch.empty(NNd+(3, 1), **tkw)
+        h1 = grad_Mo.clone(memory_format=torch.contiguous_format)[..., None]
+
+        u, uxh1 = (torch.empty(NNd+(3, 1), **tkw) for _ in range(2))
+        ϕ, cϕ_1, sϕ, utm0, uth1 = (torch.empty(NNd+(1, 1), **tkw)
+                                   for _ in range(5))
+        # ϕis0 = torch.empty(NNd+(1, 1),
+        #                    memory_format=tkw['memory_format'],
+        #                    device=tkw['device'], dtype=torch.bool)
+        # u_dflt = torch.tensor([[0.], [0.], [1.]],  # (xyz, 1)
+        #                       device=tkw['device'], dtype=tkw['dtype'])
 
         m1 = Mhst.narrow(-1, -1, 1)
-        u_dflt = γBeff.new_tensor([[0.], [0.], [1.]])  # (xyz, 1)
+
+        # scale by -γ2πdt, so output ∂L/∂B no longer needs multiply by -γ2πdt
+        h1.mul_(-γ2πdt)
         for m0, γbeff in zip(reversed((Mi,)+Mhst.split(1, dim=-1)[:-1]),
                              reversed(γBeff.split(1, dim=-1))):
-            # Rotations:
+            # %% Ajoint Relaxation:
+            fn_relax_h1_(h1)  # h₁ → h̃₁ ≔ ∂L/∂m̃₁ = E∂L/∂m₁
+            fn_relax_m1_(m1)  # m₁ → m̃₁ ≔ Rm₀ = E⁻¹m₁
+
+            # %% Adjoint Rotations:
+            # Prepare all the elements
             torch.norm(γbeff, dim=-2, keepdim=True, out=ϕ)
+            # compute `sin`, `cos` before `ϕ.clamp_()`
+            torch.sin(ϕ, out=sϕ)
+            torch.cos(ϕ, out=cϕ_1)
+            cϕ_1.sub_(1)
+
             ϕ.clamp_(min=1e-12)
-            γbeff.div_(ϕ)
-            u = γbeff  # γbeff reused as u
+            torch.div(γbeff, ϕ, out=u)
 
-            torch.logical_not(ϕ, out=ϕis0)
-            torch.cos(ϕ, out=cϕ), torch.sin(ϕ, out=sϕ)
+            # TODO: Resolve singularities of ϕ=0, control pov?
+            # torch.logical_not(ϕ, out=ϕis0)
+            # if torch.any(ϕis0):
+            #     u[ϕis0[..., 0, 0]] = u_dflt
 
-            # Resolve singularities
-            if torch.any(ϕis0):
-                u[ϕis0[..., 0, 0]] = u_dflt  # TODO: Adaptive approach?
+            torch.mul(u, m0, out=h0)
+            torch.sum(h0, dim=-2, keepdim=True, out=utm0)  # uᵀm₀
 
-            # Relaxation:
-            fn_relax_h1_(h1)  # h₁ → h̃₁
+            # %% Assemble h₀: (R(u, -ϕ)ᵀ ≡ R(u, ϕ))
+            # h₀ ≔ R(u, ϕ)h̃₁ = cϕ*h₁ + (1-cϕ)*uᵀh₁*u + sϕ*u×h₁
+            # h₀ = h̃₁ + (cϕ-1)*(h̃₁ - uᵀh̃₁*u) + sϕ*u×h̃₁, in-place friendly
+            torch.mul(u, h1, out=h0)  # using h0 as an temporary storage
+            torch.sum(h0, dim=-2, keepdim=True, out=uth1)  # uᵀh̃₁
 
-            torch.sum(u*h1, dim=-2, keepdim=True, out=uth1)  # uᵀh̃₁
-            torch.sum(u*m0, dim=-2, keepdim=True, out=utm0)  # uᵀm₀
-            torch.cross(u, h1, dim=-2, out=uxh1)             # u×h̃₁
-            torch.cross(m0, h1, dim=-2, out=m0xh1)           # m₀×h̃₁
+            torch.cross(u, h1, dim=-2, out=uxh1)  # u×h̃₁
+            torch.addcmul(h1, uth1, u, value=-1, out=h0)  # h̃₁-uᵀh̃₁*u
 
-            # h₀ ≔ ∂L/∂m₀
-            # wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
-            # h₀ = cϕ*h₁ + (1-cϕ)*uᵀh₁*u + sϕ*u×h₁
-            torch.mul(h1, cϕ, out=h0)
-            cϕ.sub_(1)  # cϕ → cϕ-1
-            h0.add_(sϕ*uxh1-cϕ*uth1*u)
+            torch.addcmul(h1, cϕ_1, h0, out=h0)  # h̃₁ + (cϕ-1)*(h̃₁-uᵀh̃₁*u)
 
-            # ∂L/∂B[..., t]
-            cϕ.div_(ϕ), sϕ.div_(ϕ)  # cϕ-1, sϕ → (cϕ-1)/ϕ, sϕ/ϕ
-            if torch.any(ϕis0):  # handle division-by-0
-                cϕ[ϕis0], sϕ[ϕis0] = 0, 1
+            # Finish: h₀ = h̃₁ + (cϕ-1)*(h̃₁ - uᵀh̃₁*u) + sϕ*u×h̃₁
+            torch.addcmul(h0, sϕ, uxh1, value=1, out=h0)
 
-            # m₁ → m̃₁ → (m̃₁ - sϕ⋅m₀)⨀(u×h̃₁)
-            fn_relax_m1_(m1)
-            m1.sub_(sϕ*m0).mul_(uxh1)
+            # %% Assemble ∂L/∂B[..., t], store into γbeff
+            # -γδt⋅(+sϕ/ϕ⋅m₀×h̃₁
+            #       +(cϕ-1)/ϕ⋅(uᵀm₀⋅h̃₁+uᵀh̃₁⋅m₀)
+            #       +((sϕ/ϕ⋅m₀-m̃₁)ᵀ(u×h̃₁)-2(cϕ-1)/ϕ⋅uᵀm₀⋅uᵀh̃1)*u )
 
-            # h̃₁ → (cϕ-1)/ϕ*(uᵀm₀*h̃₁+uᵀh̃₁*m₀)
-            h1.mul_(utm0).add_(uth1*m0).mul_(cϕ)
+            cϕ_1.div_(ϕ), sϕ.div_(ϕ)  # cϕ-1, sϕ → (cϕ-1)/ϕ, sϕ/ϕ
+            # if torch.any(ϕis0):  # handle division-by-0
+            #     cϕ_1[ϕis0], sϕ[ϕis0] = 0, 1
 
-            # (cϕ-1)/ϕ → (2*cϕ*uᵀh̃1*uᵀm₀+(u×h̃₁)ᵀm₁)
-            cϕ.mul_(2*uth1*utm0).add_(torch.sum(m1, dim=-2, keepdim=True))
+            # %%% sϕ/ϕ⋅(m₀×h̃₁)
+            torch.cross(m0, h1, dim=-2, out=γbeff)  # m₀×h̃₁
+            γbeff.mul_(sϕ)  # sϕ/ϕ⋅(m₀×h̃₁)
 
-            # u → (-(2*cϕ*uᵀh̃1*uᵀm₀+(u×h̃₁)ᵀm₁)*u
-            #      +sϕ/ϕ*m₀×h̃₁
-            #      +(cϕ-1)/ϕ*(uᵀm₀*h̃₁+uᵀh̃₁*m₀)) ≡ ∂L/∂B[..., t]
-            grad_beff = u  # u (γbeff) is re-reused as grad_beff
-            grad_beff.mul_(-cϕ).add_(m0xh1.mul_(sϕ).add_(h1))
+            # %%% sϕ/ϕ⋅(m₀×h̃₁) + (cϕ-1)/ϕ⋅(uᵀm₀⋅h̃₁+uᵀh̃₁⋅m₀)
+            h1.mul_(utm0)  # uᵀm₀⋅h̃₁
+            torch.addcmul(h1, uth1, m0, out=h1)  # (uᵀm₀⋅h̃₁+uᵀh̃₁⋅m₀)
+            torch.addcmul(γbeff, cϕ_1, h1, value=1, out=γbeff)
+
+            # %%% sϕ/ϕ⋅(m₀×h̃₁) + (cϕ-1)/ϕ⋅(uᵀm₀⋅h̃₁+uᵀh̃₁⋅m₀)
+            #     -((m̃₁-sϕ/ϕ⋅m₀)ᵀ(u×h̃₁) + 2(cϕ-1)/ϕ⋅uᵀh̃1⋅uᵀm₀)⋅u
+
+            # (m̃₁-sϕ/ϕ⋅m₀)ᵀ(u×h̃₁)
+            torch.addcmul(m1, sϕ, m0, value=-1, out=m1)  # (m̃₁-sϕ/ϕ⋅m₀)
+            m1.mul_(uxh1)
+            torch.sum(m1, dim=-2, keepdim=True, out=sϕ)
+
+            # ((m̃₁-sϕ/ϕ⋅m₀)ᵀ(u×h̃₁) + 2(cϕ-1)/ϕ⋅uᵀh̃₁⋅uᵀm₀)
+            uth1.mul_(utm0)  # uᵀh̃1⋅uᵀm₀
+            torch.addcmul(sϕ, cϕ_1, uth1, value=2, out=cϕ_1)
+
+            torch.addcmul(γbeff, cϕ_1, u, value=-1, out=γbeff)
 
             m1, h1, h0 = m0, h0, h1
 
         # %% Clean up
         grad_Beff = γBeff
-        grad_Beff.mul_(-γ2πdt)
 
-        grad_Mi = h1[..., 0] if needs_grad[0] else None
+        # undo the multiply by -γ2πdt on h1
+        grad_Mi = h1[..., 0].div_(-γ2πdt[0, ...]) if needs_grad[0] else None
         # forward(ctx, Mi, Beff; T1, T2, γ, dt):
         return grad_Mi, grad_Beff, grad_T1, grad_T2, grad_γ, grad_dt
 
