@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>mrphy.utils &mdash; MRphy.py 0.1.8 documentation</title>
+  <title>mrphy.utils &mdash; MRphy.py 0.1.9 documentation</title>
   
 
   
@@ -168,7 +168,7 @@
 <p>Utilities for data indexing, conversions, spin rotation.</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="mrphy.utils.ctrsub">
-<span class="sig-prename descclassname"><span class="pre">mrphy.utils.</span></span><span class="sig-name descname"><span class="pre">ctrsub</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.utils.ctrsub" title="Permalink to this definition">¶</a></dt>
+<span class="sig-prename descclassname"><span class="pre">mrphy.utils.</span></span><span class="sig-name descname"><span class="pre">ctrsub</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">shape</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">Any</span><a class="headerlink" href="#mrphy.utils.ctrsub" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute center subscript indices of a regular grid</p>
 <dl class="simple">
 <dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">cSub</span> <span class="pre">=</span> <span class="pre">ctrsub(shape)</span></code></p>
@@ -450,7 +450,7 @@
 
 <dl class="py function">
 <dt class="sig sig-object py" id="mrphy.utils.urot">
-<span id="mrphy.utils.uφrot"></span><span class="sig-prename descclassname"><span class="pre">mrphy.utils.</span></span><span class="sig-name descname"><span class="pre">uφrot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">U</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Φ</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Vi</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#mrphy.utils.urot" title="Permalink to this definition">¶</a></dt>
+<span id="mrphy.utils.uφrot"></span><span class="sig-prename descclassname"><span class="pre">mrphy.utils.</span></span><span class="sig-name descname"><span class="pre">uφrot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">U</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Φ</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Vi</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">torch.Tensor</span><a class="headerlink" href="#mrphy.utils.urot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Rotate Vi about axis U by Φ</p>
 <dl class="simple">
 <dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">Vo</span> <span class="pre">=</span> <span class="pre">uϕrot(U,</span> <span class="pre">Φ,</span> <span class="pre">Vi)</span></code></p>
