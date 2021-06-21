@@ -80,10 +80,8 @@ class BlochSim(Function):
         # %% Simulation. could we learn to live right.
         for m1, γbeff in zip(Mhst.split(1, dim=-1), γBeff.split(1, dim=-1)):
             # Rotation
-            torch.norm(γbeff, dim=-2, keepdim=True, out=ϕ)
-            ϕ.clamp_(min=1e-12)
-            torch.div(γbeff, ϕ, out=u)
-
+            torch.linalg.vector_norm(γbeff, dim=-2, keepdim=True, out=ϕ)
+            # compute `sin`, `cos` before `ϕ.clamp_()`.
             torch.sin(ϕ, out=sϕ)
             torch.cos(ϕ, out=cϕ_1)
             cϕ_1.sub_(1)  # (cϕ-1)
@@ -183,7 +181,7 @@ class BlochSim(Function):
 
             # %% Adjoint Rotations:
             # Prepare all the elements
-            torch.norm(γbeff, dim=-2, keepdim=True, out=ϕ)
+            torch.linalg.vector_norm(γbeff, dim=-2, keepdim=True, out=ϕ)
             # compute `sin`, `cos` before `ϕ.clamp_()`
             torch.sin(ϕ, out=sϕ)
             torch.cos(ϕ, out=cϕ_1)

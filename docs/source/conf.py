@@ -22,7 +22,7 @@ copyright = '2020, Tianrui Luo'
 author = 'Tianrui Luo'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.10'
+release = '0.2.0'
 
 
 # -- General configuration ---------------------------------------------------
