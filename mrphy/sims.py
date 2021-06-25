@@ -258,7 +258,7 @@ class BlochSim(Function):
 
 
 def blochsim(
-    Mi: Tensor, Beff: Tensor,
+    Mi: Tensor, Beff: Tensor, *,
     T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
     γ: Tensor = γH, dt: Tensor = dt0
 ) -> Tensor:
@@ -269,8 +269,8 @@ def blochsim(
     Setting `T1=T2=None` to opt for simulation ignoring relaxation.
 
     Usage:
-        ``Mo = blochsim(Mi, Beff; T1, T2, γ, dt)``
-        ``Mo = blochsim(Mi, Beff; T1=None, T2=None, γ, dt)``
+        ``Mo = blochsim(Mi, Beff, *, T1, T2, γ, dt)``
+        ``Mo = blochsim(Mi, Beff, *, T1=None, T2=None, γ, dt)``
     Inputs:
         - ``Mi``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium \
           [[[0 0 1]]].

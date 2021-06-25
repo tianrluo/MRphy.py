@@ -16,11 +16,11 @@ from mrphy import utils
 __all__ = ['beff2ab', 'beff2uφ', 'rfgr2beff']
 
 
-def beff2uϕ(beff: Tensor, γ2πdt: Tensor, dim=-1) -> Tuple[Tensor, Tensor]:
+def beff2uϕ(beff: Tensor, γ2πdt: Tensor, *, dim=-1) -> Tuple[Tensor, Tensor]:
     r"""Compute rotation axes and angles from B-effectives
 
     Usage:
-        ``U, Φ = beff2uϕ(beff, γ2πdt)``
+        ``U, Φ = beff2uϕ(beff, γ2πdt, *, dim)``
     Inputs:
         - ``beff``: `(N, *Nd, xyz)`, "Gauss", B-effective, magnetic field \
           applied on `M`.
@@ -39,7 +39,7 @@ def beff2uϕ(beff: Tensor, γ2πdt: Tensor, dim=-1) -> Tuple[Tensor, Tensor]:
 
 
 def beff2ab(
-    beff: Tensor,
+    beff: Tensor, *,
     E1: Tensor = tensor(0.), E2: Tensor = tensor(0.), γ: Tensor = γH,
     dt: Tensor = dt0
 ) -> Tuple[Tensor, Tensor]:
@@ -48,7 +48,7 @@ def beff2ab(
     See: `doi:10.1002/mrm.1170 <https://doi.org/10.1002/mrm.1170>`_.
 
     Usage:
-        ``A, B = beff2ab(beff; E1, E2, γ, dt)``
+        ``A, B = beff2ab(beff, *, E1, E2, γ, dt)``
 
     Inputs:
         - ``beff``: `(N,*Nd,xyz,nT)`, B-effective.
@@ -104,13 +104,13 @@ def beff2ab(
 
 
 def rfgr2beff(
-    rf: Tensor, gr: Tensor, loc: Tensor,
+    rf: Tensor, gr: Tensor, loc: Tensor, *,
     Δf: Optional[Tensor] = None, b1Map: Optional[Tensor] = None, γ: Tensor = γH
 ) -> Tensor:
     r"""Compute B-effectives from rf and gradients
 
     Usage:
-        ``beff = rfgr2beff(rf, gr, loc, Δf, b1Map, γ)``
+        ``beff = rfgr2beff(rf, gr, loc, *, Δf, b1Map, γ)``
     Inputs:
         - ``rf``: `(N,xy,nT,(nCoils))`, "Gauss", `xy` for separating real and \
           imag part.

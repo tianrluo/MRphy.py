@@ -33,11 +33,11 @@ def ctrsub(shape: Any) -> Any:
     return shape//2
 
 
-def g2k(g: Tensor, isTx: bool, γ: Tensor = γH, dt: Tensor = dt0) -> Tensor:
+def g2k(g: Tensor, isTx: bool, dt: Tensor = dt0, *, γ: Tensor = γH) -> Tensor:
     r"""Compute k-space from gradients.
 
     Usage:
-        ``k = g2k(g, isTx; γ, dt)``
+        ``k = g2k(g, isTx, dt, *, γ)``
 
     Inputs:
         - ``g``: `(N, xyz, nT)`, "Gauss/cm", gradient
@@ -66,7 +66,7 @@ def g2s(g: Tensor, dt: Tensor = dt0) -> Tensor:
     r"""Compute slew rates from gradients.
 
     Usage:
-        ``s = g2s(g; dt)``
+        ``s = g2s(g, dt)``
     Inputs:
         - ``g``: `(N, xyz, nT)`, "Gauss/cm", gradient
     Optionals:
@@ -83,11 +83,11 @@ def g2s(g: Tensor, dt: Tensor = dt0) -> Tensor:
     return s
 
 
-def k2g(k: Tensor, isTx: bool, γ: Tensor = γH, dt: Tensor = dt0) -> Tensor:
+def k2g(k: Tensor, isTx: bool, dt: Tensor = dt0, *, γ: Tensor = γH) -> Tensor:
     r"""Compute k-space from gradients
 
     Usage:
-        ``k = k2g(k, isTx; γ, dt)``
+        ``k = k2g(k, isTx, dt, *, γ)``
 
     Inputs:
         - ``k``: `(N, xyz, nT)`, "cycle/cm", Tx or Rx k-space.
@@ -168,7 +168,7 @@ def rf2tρθ(rf: Tensor, rfmax: Tensor) -> Tuple[Tensor, Tensor]:
     return tρ, θ
 
 
-def rfclamp(rf: Tensor, rfmax: Tensor, eps: Number = 1e-7) -> Tensor:
+def rfclamp(rf: Tensor, rfmax: Tensor, *, eps: Number = 1e-7) -> Tensor:
     r"""Clamp RF to rfmax
 
     Usage:
@@ -194,7 +194,7 @@ def s2g(s: Tensor, dt: Tensor = dt0) -> Tensor:
     r"""Compute gradients from slew rates.
 
     Usage:
-        ``g = s2g(s; dt)``
+        ``g = s2g(s, dt)``
 
     Inputs:
         - ``s``: `(N, xyz, nT)`, "Gauss/cm/Sec", Slew rate.
