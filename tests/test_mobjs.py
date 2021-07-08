@@ -14,8 +14,8 @@ class Test_mobjs:
 
     device = torch.device('cuda' if cuda.is_available() else 'cpu')
     # device = torch.device('cpu')
-    dtype, atol = torch.float32, 1e-4
-    # dtype, atol = torch.float64, 1e-9
+    # dtype, atol = torch.float32, 1e-4
+    dtype, atol = torch.float64, 1e-9
     print(device)
 
     dkw = {'dtype': dtype, 'device': device}

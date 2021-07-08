@@ -10,7 +10,7 @@ import time
 
 class Test_sims:
 
-    device = torch.device('cuda:1' if cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if cuda.is_available() else 'cpu')
     # device = torch.device('cpu')
     # dtype, atol = torch.float32, 1e-4
     dtype, atol = torch.float64, 1e-9
