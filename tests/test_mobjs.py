@@ -31,6 +31,7 @@ class Test_mobjs:
         ''' for coverage :/ '''
         assert(isinstance(mobjs.Examples.pulse(), mobjs.Pulse))
         assert(isinstance(mobjs.Examples.spincube(), mobjs.SpinCube))
+        assert(isinstance(mobjs.Examples.spincube(), mobjs.SpinArray))
         return
 
     def test_mobjs(self):

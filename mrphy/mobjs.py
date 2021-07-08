@@ -80,9 +80,9 @@ class Pulse(object):
         rf_miss, gr_miss = rf is None, gr is None
         assert (not(rf_miss and gr_miss)), "Missing both `rf` and `gr` inputs"
 
-        super().__setattr__('device', device)
-        super().__setattr__('dtype', dtype)
-        super().__setattr__('is_cuda', self.device.type == 'cuda')
+        object.__setattr__(self, 'device', device)
+        object.__setattr__(self, 'dtype', dtype)
+        object.__setattr__(self, 'is_cuda', self.device.type == 'cuda')
 
         kw = {'device': self.device, 'dtype': self.dtype}
 
@@ -95,7 +95,7 @@ class Pulse(object):
                 gr = torch.zeros((N, 3, nT), **kw)
             else:
                 assert (N == gr.shape[0] and nT == gr.shape[2])
-        super().__setattr__('shape', torch.Size((N, 1, nT)))
+        object.__setattr__(self, 'shape', torch.Size((N, 1, nT)))
 
         self.rf, self.gr = rf.to(**kw), gr.to(**kw)
         self.dt, self.gmax, self.smax, self.rfmax = dt, gmax, smax, rfmax
@@ -125,7 +125,7 @@ class Pulse(object):
                 v = v[None]
             assert(v.ndim == 1)
 
-        super().__setattr__(k, v)
+        object.__setattr__(self, k, v)
         return
 
     def asdict(self, *, toNumpy: bool = True) -> dict:
@@ -265,7 +265,7 @@ class SpinArray(object):
         - ``device``.
         - ``dtype``.
         - ``ndim``: ``len(shape)``
-        - ``nM``: ``nM = mask.sum().item()``.
+        - ``nM``: ``nM = torch.count_nonzero(mask).item()``.
         - ``T1_``: `(N, nM)`, "Sec", T1 relaxation coeff.
         - ``T2_``: `(N, nM)`, "Sec", T2 relaxation coeff.
         - ``γ_``: `(N, nM)`, "Hz/Gauss", gyro ratio.
@@ -320,13 +320,13 @@ class SpinArray(object):
                mask.dtype == torch.bool and
                mask.shape == (1,)+shape[1:])
 
-        super().__setattr__('shape', shape)
-        super().__setattr__('mask', mask)
-        super().__setattr__('ndim', len(shape))
-        super().__setattr__('nM', torch.sum(mask).item())
-        super().__setattr__('device', device)
-        super().__setattr__('dtype', dtype)
-        super().__setattr__('is_cuda', self.device.type == 'cuda')
+        object.__setattr__(self, 'shape', shape)
+        object.__setattr__(self, 'mask', mask)
+        object.__setattr__(self, 'ndim', len(shape))
+        object.__setattr__(self, 'nM', torch.count_nonzero(mask).item())
+        object.__setattr__(self, 'device', device)
+        object.__setattr__(self, 'dtype', dtype)
+        object.__setattr__(self, 'is_cuda', self.device.type == 'cuda')
 
         assert((T1 is None) or (T1_ is None))
         if T1 is None:
@@ -354,7 +354,7 @@ class SpinArray(object):
 
         return
 
-    def __getattr__(self, k):
+    def __getattr__(self, k):  # provoked only when `__getattribute__` failed
         if k+'_' not in self._compact:
             raise AttributeError(f"'SpinArray' has no attribute '{k}'")
 
@@ -363,7 +363,7 @@ class SpinArray(object):
                 v_.reshape(self.shape+v_.shape[2:]))  # ``mask`` is all True
 
     def __setattr__(self, k_, v_):
-        if (k_ in self._readonly) or (k_+'_' in self._readonly):
+        if (k_ in self._readonly):
             raise AttributeError(f"'SpinArray' object attribute '{k_}'"
                                  " is read-only")
 
@@ -383,7 +383,7 @@ class SpinArray(object):
         elif k_ in self._compact:  # (T1_, T2_, γ_)
             v_ = v_.expand((self.shape[0], self.nM))  # (N, nM)
 
-        super().__setattr__(k_, v_)
+        object.__setattr__(self, k_, v_)
         return
 
     def applypulse(
@@ -641,7 +641,7 @@ class SpinArray(object):
                          γ_=self.γ_, M_=self.M_, device=device, dtype=dtype)
 
 
-class SpinCube(object):
+class SpinCube(SpinArray):
     r"""mrphy.mobjs.SpinCube object
 
     Usage:
@@ -686,16 +686,24 @@ class SpinCube(object):
         device: torch.device = torch.device('cpu'),
         dtype: torch.dtype = torch.float32
     ):
+        # 1) `SpinCube` is subclassed to `SpinArray`.
+        # 2) Attribute `spinarray` is included to enable extracting the
+        # `SpinArray` part of a `SpinCube()` instance.
+        # 3) `SpinCube.__getattr__` is tweaked for immitating super class
+        # access to `SpinCube().spinarray`'s attributes.
+        # To have these three features, we cannot have `super().__init__()` in
+        # `SpinCube`, which will disable the `__getattr__` tweak.
         sp = SpinArray(shape, mask, T1=T1, T1_=T1_, T2=T2, T2_=T2_, γ=γ, γ_=γ_,
                        M=M, M_=M_, device=device, dtype=dtype)
-        super().__setattr__('spinarray', sp)
+        object.__setattr__(self, 'spinarray', sp)
 
         kw = {'device': sp.device, 'dtype': sp.dtype}
         # setattr(self, k, v), avoid computing `loc_` w/ `fov` & `ofst` not set
-        super().__setattr__('fov', fov.to(**kw))
-        super().__setattr__('ofst', ofst.to(**kw))
+        object.__setattr__(self, 'fov', fov.to(**kw))
+        object.__setattr__(self, 'ofst', ofst.to(**kw))
         # Initialize ``loc_`` in memory, reuse it.
-        super().__setattr__('loc_', torch.zeros((sp.shape[0], sp.nM, 3), **kw))
+        object.__setattr__(self, 'loc_',
+                           torch.zeros((sp.shape[0], sp.nM, 3), **kw))
         self._update_loc_()  # compute ``loc_`` from set ``fov`` & ``ofst`
 
         assert((Δf is None) or (Δf_ is None))
@@ -740,7 +748,7 @@ class SpinCube(object):
         elif k_ in ('fov', 'ofst'):
             assert(v_.ndim == 2)
 
-        super().__setattr__(k_, v_)
+        object.__setattr__(self, k_, v_)
 
         # update `loc_` when needed
         if k_ in ('fov', 'ofst'):
@@ -828,84 +836,6 @@ class SpinCube(object):
         d.update(self.spinarray.asdict(toNumpy=toNumpy, doEmbed=doEmbed))
         return d
 
-    def crds_(self, crds: list) -> list:
-        r"""Compute crds for compact attributes
-
-        Data in a SpinCube object is stored compactly, such that only those
-        correspond to ``1`` on the ``spincube.mask`` is kept.
-        This function is provided to facilitate indexing the compact data from
-        regular indices, by computing (ix, iy, iz) -> iM
-
-        Usage:
-            ``crds_ = spincube.crds_(crds)``
-        Inputs:
-            - ``crds``: indices for indexing non-compact attributes.
-        Outputs:
-            - ``crds_``: list, ``len(crds_) == 2+len(crds)-self.ndim``.
-
-        ``v_[crds_] == v[crds]``, when ``v_[crds_]=new_value`` is effective.
-        """
-        return self.spinarray.crds_(crds)
-
-    def dim(self) -> int:
-        r"""Nd of the spincube object, syntax sugar for len(spincube.shape)
-
-        Usage:
-            ``Nd = spincube.dim()``
-        """
-        return self.spinarray.dim()
-
-    def embed(self, v_: Tensor, *, out: Optional[Tensor] = None) -> Tensor:
-        r"""Embed compact data into the ``spincube.mask``.
-
-        Usage:
-            ``out = spincube.embed(v_, *, out)``
-        Inputs:
-            - ``v_``: `(N, nM, ...)`, must be contiguous.
-        Optionals:
-            - ``out``: `(N, *Nd, ...)`, in-place holder.
-        Outputs:
-            - ``out``: `(N, *Nd, ...)`.
-        """
-        return self.spinarray.embed(v_, out=out)
-
-    def extract(self, v: Tensor, *, out_: Optional[Tensor] = None) -> Tensor:
-        r"""Extract data with the ``spincube.mask``, making it compact
-
-        Usage:
-            ``out_ = spincube.extract(v, *, out_)``
-        Inputs:
-            - ``v``: `(N, *Nd, ...)`.
-        Optionals:
-            - ``out_``: `(N, nM, ...)`, in-place holder, must be contiguous.
-        Outputs:
-            - ``out_``: `(N, nM, ...)`.
-        """
-        return self.spinarray.extract(v, out_=out_)
-
-    def mask_(self, mask: Tensor) -> Tensor:
-        r"""Extract the compact region of an input external ``mask``.
-
-        Usage:
-            ``mask_ = spincube.mask_(mask)``
-        Inputs:
-            - ``mask``: `(1, *Nd)`.
-        Outputs:
-            - ``mask_``: `(1, nM)`, can be used on compact attributes.
-        """
-        return self.spinarray.mask_(mask)
-
-    def numel(self) -> int:
-        r"""Number of spins for the spincube object, incompact.
-
-        Syntax sugar of ``spincube.mask.numel()``, effectively
-        ``prod(spincube.size())``.
-
-        Usage:
-            ``res = spincube.numel()``
-        """
-        return self.spinarray.numel()
-
     def pulse2beff(
         self, pulse: Pulse, *,
         doEmbed: bool = False,
@@ -928,16 +858,6 @@ class SpinCube(object):
         return self.spinarray.pulse2beff(pulse, self.loc_, doEmbed=doEmbed,
                                          Δf_=self.Δf_,
                                          b1Map=b1Map, b1Map_=b1Map_)
-
-    def size(self) -> tuple:
-        r"""Size of the spincube object.
-
-        Syntax sugar of ``spincube.shape``.
-
-        Usage:
-            ``sz = spincube.size()``
-        """
-        return self.spinarray.size()
 
     def to(
         self, *,

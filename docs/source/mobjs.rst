@@ -26,6 +26,7 @@ mrphy.mobjs.SpinCube
 
 .. autoclass::
     mrphy.mobjs.SpinCube
+    :show-inheritance:
     :members:
 
 mrphy.mobjs.Examples
