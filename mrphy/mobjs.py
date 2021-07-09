@@ -1,7 +1,8 @@
 r"""Classes for MRI excitation simulations
 """
 import copy
-from typing import TypeVar, Optional
+from typing import Optional
+import inspect
 
 import numpy as np
 from scipy import interpolate
@@ -10,16 +11,6 @@ from torch import tensor, Tensor
 
 from mrphy import γH, dt0, gmax0, smax0, rfmax0, T1G, T2G, π
 from mrphy import utils, beffective, sims
-
-# TODO:
-# - Abstract Class
-# - Non-compact SpinCube initialization
-
-
-Pulse = TypeVar('Pulse', bound='Pulse')
-SpinArray = TypeVar('SpinArray', bound='SpinArray')
-SpinCube = TypeVar('SpinCube', bound='SpinCube')
-
 
 __all__ = ['Pulse', 'SpinArray', 'SpinCube', 'Examples']
 
@@ -103,6 +94,12 @@ class Pulse(object):
         return
 
     def __setattr__(self, k, v):
+        if 'deepcopy' in (_.function for _ in inspect.stack()):
+            # Hack, this enables `deepcopy()` w/o overriding `__deepcopy__()`.
+            # Generator is faster than list comprehension.
+            object.__setattr__(self, k, v)
+            return
+
         if k in self._readonly:
             raise AttributeError(f"'Pulse' object attribute '{k}'"
                                  " is read-only")
@@ -174,7 +171,7 @@ class Pulse(object):
         return beffective.rfgr2beff(self.rf, self.gr, loc,
                                     Δf=Δf, b1Map=b1Map, γ=γ)
 
-    def interpT(self, dt: Tensor, *, kind: str = 'linear') -> Pulse:
+    def interpT(self, dt: Tensor, *, kind: str = 'linear') -> 'Pulse':
         r""" Interpolate pulse of `dt` by `kind`.
 
         Usage:
@@ -224,7 +221,7 @@ class Pulse(object):
         self, *,
         device: torch.device = torch.device('cpu'),
         dtype: torch.dtype = torch.float32
-    ) -> Pulse:
+    ) -> 'Pulse':
         r"""Duplicate the object to the prescribed device with dtype
 
         Usage:
@@ -363,7 +360,13 @@ class SpinArray(object):
                 v_.reshape(self.shape+v_.shape[2:]))  # ``mask`` is all True
 
     def __setattr__(self, k_, v_):
-        if (k_ in self._readonly):
+        if 'deepcopy' in (_.function for _ in inspect.stack()):
+            # Hack, this enables `deepcopy()` w/o overriding `__deepcopy__()`.
+            # Generator is faster than list comprehension.
+            object.__setattr__(self, k_, v_)
+            return
+
+        if k_ in self._readonly:
             raise AttributeError(f"'SpinArray' object attribute '{k_}'"
                                  " is read-only")
 
@@ -624,7 +627,7 @@ class SpinArray(object):
         self, *,
         device: torch.device = torch.device('cpu'),
         dtype: torch.dtype = torch.float32
-    ) -> SpinArray:
+    ) -> 'SpinArray':
         r"""Duplicate the object to the prescribed device with dtype
 
         Usage:
@@ -716,8 +719,15 @@ class SpinCube(SpinArray):
 
     def __getattr__(self, k):  # provoked only when `__getattribute__` failed
         if k+'_' not in self._compact:  # k not in ('Δf_', 'loc')
+            # Cannot do `self.spinarray` or `getattr(self, 'spinarray')` here.
+            # They cause infinite recursion when `SpinCube().__getattr__()` is
+            # queried with `spinarray`, which may happen during `deepcopy` or
+            # `pickle`.
+            # Therefore, call `object.__getattribute__()` here, and let it fail
+            # when it should.
+            spinarray = object.__getattribute__(self, 'spinarray')
             try:
-                return getattr(self.spinarray, k)
+                return getattr(spinarray, k)
             except AttributeError:
                 raise AttributeError(f"'SpinCube' has no attribute '{k}'")
 
@@ -726,6 +736,12 @@ class SpinCube(SpinArray):
                 v_.reshape(sp.shape+v_.shape[2:]))  # `mask` is all True
 
     def __setattr__(self, k_, v_):
+        if 'deepcopy' in (_.function for _ in inspect.stack()):
+            # Hack, this enables `deepcopy()` w/o overriding `__deepcopy__()`.
+            # Generator is faster than list comprehension.
+            object.__setattr__(self, k_, v_)
+            return
+
         if (k_ in self._readonly) or (k_+'_' in self._readonly):
             raise AttributeError(f"'SpinCube' object attribute '{k_}'"
                                  " is read-only")
@@ -863,7 +879,7 @@ class SpinCube(SpinArray):
         self, *,
         device: torch.device = torch.device('cpu'),
         dtype: torch.dtype = torch.float32
-    ) -> SpinCube:
+    ) -> 'SpinCube':
         r"""Duplicate the object to the prescribed device with dtype
 
         Usage:
@@ -883,7 +899,8 @@ class SpinCube(SpinArray):
 
 class SpinBolus(SpinArray):
     def __init__(
-            self):
+        self
+    ):
         pass
     pass
 

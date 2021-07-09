@@ -1,3 +1,4 @@
+from copy import deepcopy
 import numpy as np
 import torch
 import pytest
@@ -52,6 +53,7 @@ class Test_mobjs:
 
         # Pulse
         p = mobjs.Pulse(rf=rf, gr=gr, dt=dt, **kw)
+        p = deepcopy(p)  # for pytest coverage
         assert(p.is_cuda == (p.device.type == 'cuda'))
         p = mobjs.Pulse(**(p.asdict(toNumpy=False)))
 
@@ -63,6 +65,7 @@ class Test_mobjs:
         T1_, T2 = tensor([[1.]], **kw), tensor([[4e-2]], **kw)
 
         cube = mobjs.SpinCube(shape, fov, mask=mask, T1_=T1_, γ=γ, **kw)
+        cube = deepcopy(cube)  # for pytest coverage
         assert(cube.is_cuda == (cube.device.type == 'cuda'))
         cube_dict = cube.asdict(toNumpy=False)
         cube = mobjs.SpinCube(**{k: cube_dict[k] for
