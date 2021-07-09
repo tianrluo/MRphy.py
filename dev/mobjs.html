@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>mrphy.mobjs &mdash; MRphy.py 0.1.9 documentation</title>
+  <title>mrphy.mobjs &mdash; MRphy.py 0.1.10 documentation</title>
   
 
   
@@ -330,7 +330,7 @@ within a batch after interpolation.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">device</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">dtype</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ndim</span></code>: <code class="docutils literal notranslate"><span class="pre">len(shape)</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">nM</span></code>: <code class="docutils literal notranslate"><span class="pre">nM</span> <span class="pre">=</span> <span class="pre">mask.sum().item()</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nM</span></code>: <code class="docutils literal notranslate"><span class="pre">nM</span> <span class="pre">=</span> <span class="pre">torch.count_nonzero(mask).item()</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">T1_</span></code>: <cite>(N, nM)</cite>, “Sec”, T1 relaxation coeff.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">T2_</span></code>: <cite>(N, nM)</cite>, “Sec”, T2 relaxation coeff.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">γ_</span></code>: <cite>(N, nM)</cite>, “Hz/Gauss”, gyro ratio.</p></li>
@@ -657,113 +657,6 @@ regular indices, by computing (ix, iy, iz) -&gt; iM</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="mrphy.mobjs.SpinCube.crds_">
-<span class="sig-name descname"><span class="pre">crds_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crds</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">list</span><a class="headerlink" href="#mrphy.mobjs.SpinCube.crds_" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute crds for compact attributes</p>
-<p>Data in a SpinCube object is stored compactly, such that only those
-correspond to <code class="docutils literal notranslate"><span class="pre">1</span></code> on the <code class="docutils literal notranslate"><span class="pre">spincube.mask</span></code> is kept.
-This function is provided to facilitate indexing the compact data from
-regular indices, by computing (ix, iy, iz) -&gt; iM</p>
-<dl class="simple">
-<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">crds_</span> <span class="pre">=</span> <span class="pre">spincube.crds_(crds)</span></code></p>
-</dd>
-<dt>Inputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">crds</span></code>: indices for indexing non-compact attributes.</p></li>
-</ul>
-</dd>
-<dt>Outputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">crds_</span></code>: list, <code class="docutils literal notranslate"><span class="pre">len(crds_)</span> <span class="pre">==</span> <span class="pre">2+len(crds)-self.ndim</span></code>.</p></li>
-</ul>
-</dd>
-</dl>
-<p><code class="docutils literal notranslate"><span class="pre">v_[crds_]</span> <span class="pre">==</span> <span class="pre">v[crds]</span></code>, when <code class="docutils literal notranslate"><span class="pre">v_[crds_]=new_value</span></code> is effective.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="mrphy.mobjs.SpinCube.dim">
-<span class="sig-name descname"><span class="pre">dim</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">int</span><a class="headerlink" href="#mrphy.mobjs.SpinCube.dim" title="Permalink to this definition">¶</a></dt>
-<dd><p>Nd of the spincube object, syntax sugar for len(spincube.shape)</p>
-<dl class="simple">
-<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">Nd</span> <span class="pre">=</span> <span class="pre">spincube.dim()</span></code></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="mrphy.mobjs.SpinCube.embed">
-<span class="sig-name descname"><span class="pre">embed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v_</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">torch.Tensor</span><a class="headerlink" href="#mrphy.mobjs.SpinCube.embed" title="Permalink to this definition">¶</a></dt>
-<dd><p>Embed compact data into the <code class="docutils literal notranslate"><span class="pre">spincube.mask</span></code>.</p>
-<dl class="simple">
-<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">out</span> <span class="pre">=</span> <span class="pre">spincube.embed(v_,</span> <span class="pre">*,</span> <span class="pre">out)</span></code></p>
-</dd>
-<dt>Inputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">v_</span></code>: <cite>(N, nM, …)</cite>, must be contiguous.</p></li>
-</ul>
-</dd>
-<dt>Optionals:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">out</span></code>: <cite>(N, *Nd, …)</cite>, in-place holder.</p></li>
-</ul>
-</dd>
-<dt>Outputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">out</span></code>: <cite>(N, *Nd, …)</cite>.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="mrphy.mobjs.SpinCube.extract">
-<span class="sig-name descname"><span class="pre">extract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">v</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">torch.Tensor</span><a class="headerlink" href="#mrphy.mobjs.SpinCube.extract" title="Permalink to this definition">¶</a></dt>
-<dd><p>Extract data with the <code class="docutils literal notranslate"><span class="pre">spincube.mask</span></code>, making it compact</p>
-<dl class="simple">
-<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">out_</span> <span class="pre">=</span> <span class="pre">spincube.extract(v,</span> <span class="pre">*,</span> <span class="pre">out_)</span></code></p>
-</dd>
-<dt>Inputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">v</span></code>: <cite>(N, *Nd, …)</cite>.</p></li>
-</ul>
-</dd>
-<dt>Optionals:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">out_</span></code>: <cite>(N, nM, …)</cite>, in-place holder, must be contiguous.</p></li>
-</ul>
-</dd>
-<dt>Outputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">out_</span></code>: <cite>(N, nM, …)</cite>.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="mrphy.mobjs.SpinCube.mask_">
-<span class="sig-name descname"><span class="pre">mask_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">torch.Tensor</span><a class="headerlink" href="#mrphy.mobjs.SpinCube.mask_" title="Permalink to this definition">¶</a></dt>
-<dd><p>Extract the compact region of an input external <code class="docutils literal notranslate"><span class="pre">mask</span></code>.</p>
-<dl class="simple">
-<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">mask_</span> <span class="pre">=</span> <span class="pre">spincube.mask_(mask)</span></code></p>
-</dd>
-<dt>Inputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">mask</span></code>: <cite>(1, *Nd)</cite>.</p></li>
-</ul>
-</dd>
-<dt>Outputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">mask_</span></code>: <cite>(1, nM)</cite>, can be used on compact attributes.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="mrphy.mobjs.SpinCube.numel">
-<span class="sig-name descname"><span class="pre">numel</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">int</span><a class="headerlink" href="#mrphy.mobjs.SpinCube.numel" title="Permalink to this definition">¶</a></dt>
-<dd><p>Number of spins for the spincube object, incompact.</p>
-<p>Syntax sugar of <code class="docutils literal notranslate"><span class="pre">spincube.mask.numel()</span></code>, effectively
-<code class="docutils literal notranslate"><span class="pre">prod(spincube.size())</span></code>.</p>
-<dl class="simple">
-<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">res</span> <span class="pre">=</span> <span class="pre">spincube.numel()</span></code></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="mrphy.mobjs.SpinCube.pulse2beff">
 <span class="sig-name descname"><span class="pre">pulse2beff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pulse</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><a class="reference internal" href="#mrphy.mobjs.Pulse" title="mrphy.mobjs.Pulse"><span class="pre">mrphy.mobjs.Pulse</span></a></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doEmbed</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b1Map</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b1Map_</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> &#x2192; <span class="pre">torch.Tensor</span><a class="headerlink" href="#mrphy.mobjs.SpinCube.pulse2beff" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute B-effective of <code class="docutils literal notranslate"><span class="pre">pulse</span></code> with the spincube’s parameters</p>
@@ -783,17 +676,6 @@ regular indices, by computing (ix, iy, iz) -&gt; iM</p>
 <dt>Outputs:</dt><dd><ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">beff</span></code> ⊻ <code class="docutils literal notranslate"><span class="pre">beff_</span></code>: <cite>(N,*Nd ⊻ nM,xyz,nT)</cite>.</p></li>
 </ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="mrphy.mobjs.SpinCube.size">
-<span class="sig-name descname"><span class="pre">size</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; <span class="pre">tuple</span><a class="headerlink" href="#mrphy.mobjs.SpinCube.size" title="Permalink to this definition">¶</a></dt>
-<dd><p>Size of the spincube object.</p>
-<p>Syntax sugar of <code class="docutils literal notranslate"><span class="pre">spincube.shape</span></code>.</p>
-<dl class="simple">
-<dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">sz</span> <span class="pre">=</span> <span class="pre">spincube.size()</span></code></p>
 </dd>
 </dl>
 </dd></dl>
