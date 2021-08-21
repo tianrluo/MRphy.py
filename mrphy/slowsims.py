@@ -50,15 +50,15 @@ def blochsim_1step(
 
 
 def blochsim(
-    M: Tensor, Beff: Tensor,
+    M: Tensor, Beff: Tensor, *,
     T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
     γ: Tensor = γH, dt: Tensor = dt0
 ) -> Tensor:
     r"""Bloch simulator with implicit Jacobian operations.
 
     Usage:
-        ``Mo = blochsim(Mi, Beff; T1, T2, γ, dt)``
-        ``Mo = blochsim(Mi, Beff; T1=None, T2=None, γ, dt)``
+        ``Mo = blochsim(Mi, Beff, *, T1, T2, γ, dt)``
+        ``Mo = blochsim(Mi, Beff, *, T1=None, T2=None, γ, dt)``
     Inputs:
         - ``M``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium \
           [[[0 0 1]]].
