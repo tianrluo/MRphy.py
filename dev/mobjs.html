@@ -486,6 +486,38 @@ regular indices, by computing (ix, iy, iz) -&gt; iM</p>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="mrphy.mobjs.SpinArray.freeprec">
+<span class="sig-name descname"><span class="pre">freeprec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dur</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doEmbed</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doRelax</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doUpdate</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Δf</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Δf_</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">torch.Tensor</span></span></span><a class="headerlink" href="#mrphy.mobjs.SpinArray.freeprec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Free precession of duration <code class="docutils literal notranslate"><span class="pre">dur</span></code></p>
+<dl class="simple">
+<dt>Typical usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">obj.freeprec(dur,</span> <span class="pre">doEmbed=True,</span> <span class="pre">doRelax,</span> <span class="pre">doUpdate,</span> <span class="pre">Δf)</span></code>
+<code class="docutils literal notranslate"><span class="pre">M_</span> <span class="pre">=</span> <span class="pre">obj.applypulse(dur,</span> <span class="pre">doEmbed=False,</span> <span class="pre">doRelax,</span> <span class="pre">doUpdate,</span> <span class="pre">Δf_)</span></code></p>
+</dd>
+<dt>Inputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">dur</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1,)</cite>, “Sec”, duration of free-precession.</p></li>
+</ul>
+</dd>
+<dt>Optionals:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">doEmbed</span></code>: [t/F], return <code class="docutils literal notranslate"><span class="pre">M</span></code> or <code class="docutils literal notranslate"><span class="pre">M_</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">doRelax</span></code>: [T/f], do relaxation during free precession.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">doUpdate</span></code>: [t/F], update <code class="docutils literal notranslate"><span class="pre">self.M_</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Δf``⊻</span> <span class="pre">``Δf_</span></code>: <cite>(N ⊻ 1,*Nd ⊻ nM)</cite>, “Hz”, off-resonance.</p></li>
+</ul>
+</dd>
+<dt>Outputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code> ⊻ <code class="docutils literal notranslate"><span class="pre">M_</span></code>: <cite>(N,*Nd ⊻ nM,xyz)</cite></p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">doUpdate</span> <span class="pre">==</span> <span class="pre">True</span> <span class="pre">and</span> <span class="pre">doEmbed</span> <span class="pre">==</span> <span class="pre">False</span></code>, the output compact
+magnetization Tensor is a reference to <code class="docutils literal notranslate"><span class="pre">self.M_</span></code>, and needs
+caution when being accessed.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="mrphy.mobjs.SpinArray.mask_">
 <span class="sig-name descname"><span class="pre">mask_</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">torch.Tensor</span></span></span><a class="headerlink" href="#mrphy.mobjs.SpinArray.mask_" title="Permalink to this definition">¶</a></dt>
 <dd><p>Extract the compact region of an input external <code class="docutils literal notranslate"><span class="pre">mask</span></code>.</p>
@@ -655,6 +687,37 @@ regular indices, by computing (ix, iy, iz) -&gt; iM</p>
 </ul>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="mrphy.mobjs.SpinCube.freeprec">
+<span class="sig-name descname"><span class="pre">freeprec</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dur</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doEmbed</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doRelax</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">doUpdate</span></span><span class="p"><span class="pre">:</span></span> <span class="n"><span class="pre">bool</span></span> <span class="o"><span class="pre">=</span></span> <span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">torch.Tensor</span></span></span><a class="headerlink" href="#mrphy.mobjs.SpinCube.freeprec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Free precession of duration <code class="docutils literal notranslate"><span class="pre">dur</span></code></p>
+<dl class="simple">
+<dt>Typical usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">M</span> <span class="pre">=</span> <span class="pre">obj.freeprec(dur,</span> <span class="pre">doEmbed=True,</span> <span class="pre">doRelax,</span> <span class="pre">doUpdate)</span></code>
+<code class="docutils literal notranslate"><span class="pre">M_</span> <span class="pre">=</span> <span class="pre">obj.applypulse(dur,</span> <span class="pre">doEmbed=False,</span> <span class="pre">doRelax,</span> <span class="pre">doUpdate)</span></code></p>
+</dd>
+<dt>Inputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">dur</span></code>: <cite>()</cite> ⊻ <cite>(N ⊻ 1,)</cite>, “Sec”, duration of free-precession.</p></li>
+</ul>
+</dd>
+<dt>Optionals:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">doEmbed</span></code>: [t/F], return <code class="docutils literal notranslate"><span class="pre">M</span></code> or <code class="docutils literal notranslate"><span class="pre">M_</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">doRelax</span></code>: [T/f], do relaxation during free precession.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">doUpdate</span></code>: [t/F], update <code class="docutils literal notranslate"><span class="pre">self.M_</span></code></p></li>
+</ul>
+</dd>
+<dt>Outputs:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">M</span></code> ⊻ <code class="docutils literal notranslate"><span class="pre">M_</span></code>: <cite>(N,*Nd ⊻ nM,xyz)</cite></p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">doUpdate</span> <span class="pre">==</span> <span class="pre">True</span> <span class="pre">and</span> <span class="pre">doEmbed</span> <span class="pre">==</span> <span class="pre">False</span></code>, the output compact
+magnetization Tensor is a reference to <code class="docutils literal notranslate"><span class="pre">self.M_</span></code>, and needs
+caution when being accessed.</p>
+</div>
 </dd></dl>
 
 <dl class="py method">
