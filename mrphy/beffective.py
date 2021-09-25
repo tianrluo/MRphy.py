@@ -1,5 +1,4 @@
-r""" B-effective related functions
-"""
+r"""B-effective related functions"""
 
 import torch
 import torch.nn.functional as F
@@ -115,8 +114,8 @@ def rfgr2beff(
         - ``rf``: `(N,xy,nT,(nCoils))`, "Gauss", `xy` for separating real and \
           imag part.
         - ``gr``: `(N,xyz,nT)`, "Gauss/cm".
-    Optionals:
         - ``loc``: `(N,*Nd,xyz)`, "cm", locations.
+    Optionals:
         - ``Δf``: `(N,*Nd,)`, "Hz", off-resonance.
         - ``b1Map``: `(N, *Nd, xy (, nCoils)`, a.u., transmit sensitivity.
         - ``γ``:  `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Hz/Gauss", gyro ratio.

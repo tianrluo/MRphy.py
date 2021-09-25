@@ -172,7 +172,7 @@ def rfclamp(rf: Tensor, rfmax: Tensor, *, eps: Number = 1e-7) -> Tensor:
     r"""Clamp RF to rfmax
 
     Usage:
-        ``rf = rfclamp(rf, rfmax)``
+        ``rf = rfclamp(rf, rfmax, *, eps)``
     Inputs:
         - ``rf``: `(N, xy, nT, (nCoils))`, RF pulse, Gauss, x for real, y for \
           imag.

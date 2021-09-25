@@ -63,7 +63,6 @@ class Pulse(object):
         device: torch.device = torch.device('cpu'),
         dtype: torch.dtype = torch.float32
     ):
-
         assert(isinstance(device, torch.device) and
                isinstance(dtype, torch.dtype))
 
@@ -149,7 +148,8 @@ class Pulse(object):
     def beff(
             self, loc: Tensor, *,
             Δf: Optional[Tensor] = None, b1Map: Optional[Tensor] = None,
-            γ: Tensor = γH) -> Tensor:
+            γ: Tensor = γH
+    ) -> Tensor:
         r"""Compute B-effective of provided location from the pulse
 
         Usage:
