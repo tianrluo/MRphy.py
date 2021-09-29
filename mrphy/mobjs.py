@@ -63,7 +63,6 @@ class Pulse(object):
         device: torch.device = torch.device('cpu'),
         dtype: torch.dtype = torch.float32
     ):
-
         assert(isinstance(device, torch.device) and
                isinstance(dtype, torch.dtype))
 
@@ -149,7 +148,8 @@ class Pulse(object):
     def beff(
             self, loc: Tensor, *,
             Δf: Optional[Tensor] = None, b1Map: Optional[Tensor] = None,
-            γ: Tensor = γH) -> Tensor:
+            γ: Tensor = γH
+    ) -> Tensor:
         r"""Compute B-effective of provided location from the pulse
 
         Usage:
@@ -550,6 +550,45 @@ class SpinArray(object):
         # out_.copy_(v[mask].reshape((-1,)+v.shape[self.ndim:]))
         return out_
 
+    def freeprec(
+        self, dur: Tensor, *,
+        doEmbed: bool = False, doRelax: bool = True, doUpdate: bool = False,
+        Δf: Optional[Tensor] = None, Δf_: Optional[Tensor] = None
+    ) -> Tensor:
+        r"""Free precession of duration ``dur``
+
+        Typical usage:
+            ``M = obj.freeprec(dur, doEmbed=True, doRelax, doUpdate, Δf)``
+            ``M_ = obj.applypulse(dur, doEmbed=False, doRelax, doUpdate, Δf_)``
+        Inputs:
+            - ``dur``: `()` ⊻ `(N ⊻ 1,)`, "Sec", duration of free-precession.
+        Optionals:
+            - ``doEmbed``: [t/F], return ``M`` or ``M_``
+            - ``doRelax``: [T/f], do relaxation during free precession.
+            - ``doUpdate``: [t/F], update ``self.M_``
+            - ``Δf``⊻ ``Δf_``: `(N ⊻ 1,*Nd ⊻ nM)`, "Hz", off-resonance.
+        Outputs:
+            - ``M`` ⊻ ``M_``: `(N,*Nd ⊻ nM,xyz)`
+
+        .. note::
+            When ``doUpdate == True and doEmbed == False``, the output compact
+            magnetization Tensor is a reference to ``self.M_``, and needs
+            caution when being accessed.
+        """
+        assert ((Δf_ is None) or (Δf is None))
+        Δf_ = (Δf_ if Δf is None else self.extract(Δf))
+
+        if doRelax:
+            kw_bsim = {'T1': self.T1_, 'T2': self.T2_}
+        else:
+            kw_bsim = {'T1': None, 'T2': None}
+
+        M_ = sims.freeprec(self.M_, dur, **kw_bsim, Δf=Δf_)
+        if doUpdate:
+            self.M_ = M_
+        M_ = (self.embed(M_) if doEmbed else M_)
+        return M_
+
     def mask_(self, *, mask: Tensor) -> Tensor:
         r"""Extract the compact region of an input external ``mask``.
 
@@ -826,6 +865,33 @@ class SpinCube(SpinArray):
                                          doRelax=doRelax, doUpdate=doUpdate,
                                          Δf_=self.Δf_, loc_=self.loc_,
                                          b1Map_=b1Map_)
+
+    def freeprec(
+        self, dur: Tensor, *,
+        doEmbed: bool = False, doRelax: bool = True, doUpdate: bool = False
+    ) -> Tensor:
+        r"""Free precession of duration ``dur``
+
+        Typical usage:
+            ``M = obj.freeprec(dur, doEmbed=True, doRelax, doUpdate)``
+            ``M_ = obj.applypulse(dur, doEmbed=False, doRelax, doUpdate)``
+        Inputs:
+            - ``dur``: `()` ⊻ `(N ⊻ 1,)`, "Sec", duration of free-precession.
+        Optionals:
+            - ``doEmbed``: [t/F], return ``M`` or ``M_``
+            - ``doRelax``: [T/f], do relaxation during free precession.
+            - ``doUpdate``: [t/F], update ``self.M_``
+        Outputs:
+            - ``M`` ⊻ ``M_``: `(N,*Nd ⊻ nM,xyz)`
+
+        .. note::
+            When ``doUpdate == True and doEmbed == False``, the output compact
+            magnetization Tensor is a reference to ``self.M_``, and needs
+            caution when being accessed.
+        """
+
+        return self.spinarray.freeprec(dur, Δf_=self.Δf_, doEmbed=doEmbed,
+                                       doRelax=doRelax, doUpdate=doUpdate)
 
     def asdict(self, *, toNumpy: bool = True, doEmbed: bool = True) -> dict:
         r"""Convert mrphy.mobjs.SpinCube object to dict

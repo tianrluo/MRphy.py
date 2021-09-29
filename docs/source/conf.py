@@ -16,13 +16,14 @@
 
 
 # -- Project information -----------------------------------------------------
+from mrphy import __version__
 
 project = 'MRphy.py'
 copyright = '2020, Tianrui Luo'
 author = 'Tianrui Luo'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.10'
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------

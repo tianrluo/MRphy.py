@@ -140,7 +140,63 @@ class Test_sims:
         assert(pytest.approx(grad_M0_1b, abs=atol) == grad_M0_2b)
         assert(pytest.approx(grad_beff_1b, abs=atol) == grad_beff_2b)
 
+    def test_freeprec(self):
+        """
+        *Note*:
+        This test relies on the correctness of `test_slowsims.py`.
+        """
+        f_t2np = lambda x: x.detach().clone().cpu().numpy()  # noqa: E731
+
+        print('\n')
+        dkw, atol = self.dkw, self.atol
+        γ = self.γ
+
+        # spins  # (1,nM,xyz)
+        M0 = torch.rand((1, 16*16*2, 3), **dkw)
+        N, nM = M0.shape[0], M0.shape[1]
+        Nd = (nM,)
+
+        M0.requires_grad = True
+
+        # parameters: Sec; cm.
+        dur = torch.tensor(0.5, **dkw)
+        T1, T2 = tensor([[1.]], **dkw), tensor([[4e-2]], **dkw)
+
+        loc_x = torch.linspace(-1., 1., steps=nM, **dkw).reshape((N,)+Nd)
+
+        Δf = -loc_x * γ  # gr_x==1 Gauss/cm cancels Δf
+
+        # %% sim
+        print('\nfreeprec tests:')
+        t = time.time()
+        Mo1 = slowsims.freeprec(M0, dur, T1=T1, T2=T2, Δf=Δf)
+        print('forward: slowsims.freeprec', time.time() - t)
+
+        res1 = torch.sum(Mo1)
+        t = time.time()
+        res1.backward()  # keep graph to check `bar.backward()`
+        print('backward: slowsims.freeprec', time.time() - t)
+        grad_M0_1 = f_t2np(M0.grad)
+
+        M0.grad = None
+
+        t = time.time()
+        Mo2 = sims.freeprec(M0, dur, T1=T1, T2=T2, Δf=Δf)
+        print('forward: sims.freeprec', time.time() - t)
+
+        res2 = torch.sum(Mo2)
+        t = time.time()
+        res2.backward()  # keep graph to check `bar.backward()`
+        print('backward: sims.blochsim', time.time() - t)
+        grad_M0_2 = f_t2np(M0.grad)
+
+        M0.grad = None
+
+        assert(pytest.approx(grad_M0_1, abs=atol) == grad_M0_2)
+        return
+
 
 if __name__ == '__main__':
     tmp = Test_sims()
     tmp.test_blochsims()
+    tmp.test_freeprec()

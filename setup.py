@@ -2,6 +2,13 @@ from setuptools import setup, find_packages
 import ctypes
 
 
+version = {}
+with open("mrphy/version.py") as fp:
+    exec(fp.read(), version)
+
+__version__ = version['__version__']
+
+
 def cuda_is_available():
     libnames = ('libcuda.so', 'libcuda.dylib', 'cuda.dll')
     for name in libnames:
@@ -25,7 +32,7 @@ with open("README.md", "r") as h:
 
 setup(
     name="mrphy",
-    version="0.1.10",
+    version=__version__,
     author="Tianrui Luo",
     author_email="tianrluo@umich.edu",
     description="A Pytorch based tool for MR physics simulations",

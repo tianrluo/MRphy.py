@@ -65,5 +65,7 @@ rfmax0 = tensor(0.25, dtype=torch.double)  # Gauss
 _slice = slice(None)
 
 from mrphy import (utils, beffective, sims, slowsims, mobjs)  # noqa: E402
+from mrphy.version import __version__
 
 __all__ = ['γH', 'utils', 'beffective', 'sims', 'slowsims', 'mobjs']
+
