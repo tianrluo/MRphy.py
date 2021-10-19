@@ -75,6 +75,15 @@ class Test_utils:
         assert(to_np(rf0) == pytest.approx(to_np(rf1), abs=atol))
         return
 
+    def test_rfclamplogit(self):
+        shape, rfmax, atol = (1, 2, 10), rfmax0, self.atol
+        rf0 = utils.rfclamp(rfmax0*((torch.rand(shape)-0.5)*4), rfmax)
+        assert(torch.all(rf0.norm(dim=1) <= rfmax))
+        lρ, θ = utils.rf2lρθ(rf0, rfmax)
+        rf1 = utils.lρθ2rf(lρ, θ, rfmax)
+        assert(to_np(rf0) == pytest.approx(to_np(rf1), abs=atol))
+        return
+
     def test_sclamptan(self):
         shape, smax, atol = (1, 3, 10), smax0, self.atol
         s0 = utils.sclamp(smax0*((torch.rand(shape)-0.5)*4), smax)

@@ -111,6 +111,26 @@ def k2g(k: Tensor, isTx: bool, dt: Tensor = dt0, *, γ: Tensor = γH) -> Tensor:
     return g
 
 
+def lρθ2rf(lρ: Tensor, θ: Tensor, rfmax: Tensor) -> Tensor:
+    r"""Convert tρ ≔ tan(ρ/ρ_max⋅π/2), and θ to real RF
+
+    Usage:
+        ``rf = lρθ2rf(lρ, θ, rfmax)``
+    Inputs:
+        - ``lρ``: `(N, 1, nT, (nCoils))`, logit(ρ/rfmax), [-∞, +∞).
+        - ``θ``: `(N, 1, nT, (nCoils))`, RF phase, [-π, π).
+        - ``rfmax``: `(N, (nCoils))`, RF pulse, Gauss, x for real, y for imag.
+    Outputs:
+        - ``rf``: `(N, xy, nT, (nCoils))`, RF pulse, Gauss, x: real, y: imag.
+
+    See Also:
+        :func:`~mrphy.utils.rf2lρθ`
+    """
+    rfmax = rfmax[None] if rfmax.ndim == 0 else rfmax
+    rfmax = rfmax[:, None, None, ...]  # -> (N, 1, 1, (nCoils))
+    return lρ.sigmoid()*rfmax*torch.cat((θ.cos(), θ.sin()), dim=1)
+
+
 def rf_c2r(rf: ndarrayA) -> ndarrayA:
     r"""Convert complex RF to real RF
 
@@ -146,18 +166,38 @@ def rf_r2c(rf: ndarrayA) -> ndarrayA:
     return rf[:, [0], ...] + 1j*rf[:, [1], ...]
 
 
+def rf2lρθ(rf: Tensor, rfmax: Tensor) -> Tuple[Tensor, Tensor]:
+    """Convert real RF to tρ ≔ tan(ρ/ρ_max⋅π/2), and θ
+
+    Usage:
+        ``lρ, θ = rf2lρθ(rf, rfmax)``
+    Inputs:
+        - ``rf``: `(N, xy, nT, (nCoils))`, RF pulse, Gauss, x: real, y: imag.
+        - ``rfmax``: `(N, (nCoils))`, RF pulse, Gauss.
+    Outputs:
+        - ``lρ``: `(N, 1, nT, (nCoils))`, logit(ρ/rfmax), [0, +∞).
+        - ``θ``: `(N, 1, nT, (nCoils))`, RF phase, [-π, π].
+
+    See Also:
+        :func:`~mrphy.utils.lρθ2rf`
+    """
+    rfmax = rfmax[None] if rfmax.ndim == 0 else rfmax  # scalar to 1d-tensor
+    lρ = (rf.norm(dim=1, keepdim=True)/rfmax[:, None, None, ...]).logit()
+    θ = torch.atan2(rf[:, [1], :], rf[:, [0], :])
+    return lρ, θ
+
+
 def rf2tρθ(rf: Tensor, rfmax: Tensor) -> Tuple[Tensor, Tensor]:
     """Convert real RF to tρ ≔ tan(ρ/ρ_max⋅π/2), and θ
 
     Usage:
         ``tρ, θ = rf2tρθ(rf, rfmax)``
     Inputs:
-        - ``rf``: `(N, xy, nT, (nCoils))`, RF pulse, Gauss, x for real, y for \
-          imag.
+        - ``rf``: `(N, xy, nT, (nCoils))`, RF pulse, Gauss, x: real, y: imag.
         - ``rfmax``: `(N, (nCoils))`, RF pulse, Gauss, x for real, y for imag.
     Outputs:
         - ``tρ``: `(N, 1, nT, (nCoils))`, tan(ρ/rfmax*π/2), [0, +∞).
-        - ``θ``: `(N, 1, nT, (nCoils))`, RF phase, [-π/2, π/2].
+        - ``θ``: `(N, 1, nT, (nCoils))`, RF phase, [-π, π).
 
     See Also:
         :func:`~mrphy.utils.tρθ2rf`
@@ -274,8 +314,7 @@ def tρθ2rf(tρ: Tensor, θ: Tensor, rfmax: Tensor) -> Tensor:
         - ``θ``: `(N, 1, nT, (nCoils))`, RF phase, [-π/2, π/2].
         - ``rfmax``: `(N, (nCoils))`, RF pulse, Gauss, x for real, y for imag.
     Outputs:
-        - ``rf``: `(N, xy, nT, (nCoils))`, RF pulse, Gauss, x for real, y for \
-          imag.
+        - ``rf``: `(N, xy, nT, (nCoils))`, RF pulse, Gauss, x: real, y: imag.
 
     See Also:
         :func:`~mrphy.utils.rf2tρθ`
