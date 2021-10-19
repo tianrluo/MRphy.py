@@ -169,13 +169,13 @@
 <dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">tρ,</span> <span class="pre">θ</span> <span class="pre">=</span> <span class="pre">rf2tρθ(rf,</span> <span class="pre">rfmax)</span></code></p>
 </dd>
 <dt>Inputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">rf</span></code>: <cite>(N, xy, nT, (nCoils))</cite>, RF pulse, Gauss, x for real, y for           imag.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rf</span></code>: <cite>(N, xy, nT, (nCoils))</cite>, RF pulse, Gauss, x: real, y: imag.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">rfmax</span></code>: <cite>(N, (nCoils))</cite>, RF pulse, Gauss, x for real, y for imag.</p></li>
 </ul>
 </dd>
 <dt>Outputs:</dt><dd><ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">tρ</span></code>: <cite>(N, 1, nT, (nCoils))</cite>, tan(ρ/rfmax*π/2), [0, +∞).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">θ</span></code>: <cite>(N, 1, nT, (nCoils))</cite>, RF phase, [-π/2, π/2].</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">θ</span></code>: <cite>(N, 1, nT, (nCoils))</cite>, RF phase, [-π, π).</p></li>
 </ul>
 </dd>
 <dt>See Also:</dt><dd><p><a class="reference internal" href="#mrphy.utils.t2rf" title="mrphy.utils.tρθ2rf"><code class="xref py py-func docutils literal notranslate"><span class="pre">tρθ2rf()</span></code></a></p>
@@ -349,7 +349,7 @@
 </ul>
 </dd>
 <dt>Outputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">rf</span></code>: <cite>(N, xy, nT, (nCoils))</cite>, RF pulse, Gauss, x for real, y for imag.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">rf</span></code>: <cite>(N, xy, nT, (nCoils))</cite>, RF pulse, Gauss, x: real, y: imag.</p></li>
 </ul>
 </dd>
 <dt>See Also:</dt><dd><p><a class="reference internal" href="#mrphy.utils.rf2t" title="mrphy.utils.rf2tρθ"><code class="xref py py-func docutils literal notranslate"><span class="pre">rf2tρθ()</span></code></a></p>
