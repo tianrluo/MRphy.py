@@ -55,12 +55,14 @@ class Test_utils:
 
     def test_rc_rf(self):
         shape, atol = (1, 2, 5), self.atol
-        rf_r_0_np = np.random.rand(*shape).astype(np.double)
+        tmp = np.random.rand(*shape)
+        rf_r_0_np = tmp.astype(np.double, copy=False)
         rf_r_1_np = utils.rf_c2r(utils.rf_r2c(rf_r_0_np))
         assert(rf_r_0_np == pytest.approx(rf_r_1_np, abs=atol))
 
         if torch.cuda.is_available():
-            rf_r_0_cp = cp.random.rand(*shape).astype(cp.double)
+            tmp_cp = cp.random.rand(*shape)
+            rf_r_0_cp = tmp.astype(cp.double, copy=False)
             rf_r_1_cp = utils.rf_c2r(utils.rf_r2c(rf_r_0_cp))
             assert(cp.asnumpy(rf_r_0_cp) ==
                    pytest.approx(cp.asnumpy(rf_r_1_cp), abs=atol))
