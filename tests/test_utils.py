@@ -3,9 +3,9 @@ import torch
 import pytest
 from torch import tensor, cuda
 
-from mrphy import γH, dt0, rfmax0, smax0
+from mrphy import γH, dt0, rfmax0, smax0, __CUPY_IS_AVAILABLE__
 from mrphy import utils
-if torch.cuda.is_available():
+if __CUPY_IS_AVAILABLE__:
     import cupy as cp
 
 

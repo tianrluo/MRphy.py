@@ -9,23 +9,7 @@ with open("mrphy/version.py") as fp:
 __version__ = version['__version__']
 
 
-def cuda_is_available():
-    libnames = ('libcuda.so', 'libcuda.dylib', 'cuda.dll')
-    for name in libnames:
-        try:
-            ctypes.CDLL(name)
-        except OSError:
-            continue
-        else:
-            return True
-    else:
-        return False
-    return False
-
-
-REQUIRED_PACKAGES = ['torch>=1.3', 'numpy', 'scipy', 'cupy>=7.0.0']
-if not cuda_is_available():
-    REQUIRED_PACKAGES.remove('cupy>=7.0.0')
+REQUIRED_PACKAGES = ['torch>=1.3', 'numpy', 'scipy']
 
 with open("README.md", "r") as h:
     long_description = h.read()

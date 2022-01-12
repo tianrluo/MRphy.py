@@ -11,8 +11,8 @@ import numpy as np
 from numpy import ndarray as ndarray_c
 from torch import Tensor
 
-from mrphy import γH, dt0, π
-if torch.cuda.is_available():
+from mrphy import γH, dt0, π, __CUPY_IS_AVAILABLE__
+if __CUPY_IS_AVAILABLE__:
     import cupy as cp
     from cupy import ndarray as ndarray_g
     ndarrayA = Union[ndarray_c, ndarray_g]
@@ -146,8 +146,10 @@ def rf_c2r(rf: ndarrayA) -> ndarrayA:
     """
     if isinstance(rf, ndarray_c):
         return np.concatenate((np.real(rf), np.imag(rf)), axis=1)
-    else:  # ndarray_g, i.e., cupy.ndarray
+    elif __CUPY_IS_AVAILABLE__:  # ndarray_g, i.e., cupy.ndarray
         return cp.concatenate((cp.real(rf), cp.imag(rf)), axis=1)
+    else:
+        raise TypeError(f'Unknown type: {type(rf)}')
 
 
 def rf_r2c(rf: ndarrayA) -> ndarrayA:
