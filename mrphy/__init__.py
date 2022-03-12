@@ -49,6 +49,7 @@ Special keywords used in documentations:
   can be one of the size tuple set, e.g. ``(N, nM ⊻ *Nd, xyz)`` means \
   accepting dimension either ``(N, nM, xyz)`` or ``(N, *Nd, xyz)``.
 """
+import warnings, ctypes
 
 from math import pi as π, inf  # noqa: F401
 import torch
@@ -64,8 +65,35 @@ rfmax0 = tensor(0.25, dtype=torch.double)  # Gauss
 
 _slice = slice(None)
 
+
+def cuda_is_available() -> bool:
+    r"""Returns `True` if cuda is available"""
+    libnames = ('libcuda.so', 'libcuda.dylib', 'cuda.dll')
+    for name in libnames:
+        try:
+            ctypes.CDLL(name)
+        except OSError:
+            continue
+        else:
+            return True
+    else:
+        return False
+    return False
+
+
+__CUDA_IS_AVAILABLE__ = cuda_is_available()
+
+try:
+    import cupy
+    __CUPY_IS_AVAILABLE__ = True
+except ImportError:
+    if __CUDA_IS_AVAILABLE__:
+        warnings.warn('Unable to import `cupy` while CUDA is available',
+                      ImportWarning)
+    __CUPY_IS_AVAILABLE__ = False
+
+
 from mrphy import (utils, beffective, sims, slowsims, mobjs)  # noqa: E402
 from mrphy.version import __version__
 
 __all__ = ['γH', 'utils', 'beffective', 'sims', 'slowsims', 'mobjs']
-

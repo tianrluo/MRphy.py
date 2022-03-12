@@ -3,9 +3,9 @@ import torch
 import pytest
 from torch import tensor, cuda
 
-from mrphy import γH, dt0, rfmax0, smax0
+from mrphy import γH, dt0, rfmax0, smax0, __CUPY_IS_AVAILABLE__
 from mrphy import utils
-if torch.cuda.is_available():
+if __CUPY_IS_AVAILABLE__:
     import cupy as cp
 
 
@@ -55,12 +55,14 @@ class Test_utils:
 
     def test_rc_rf(self):
         shape, atol = (1, 2, 5), self.atol
-        rf_r_0_np = np.random.rand(*shape).astype(np.double)
+        tmp = np.random.rand(*shape)
+        rf_r_0_np = tmp.astype(np.double, copy=False)
         rf_r_1_np = utils.rf_c2r(utils.rf_r2c(rf_r_0_np))
         assert(rf_r_0_np == pytest.approx(rf_r_1_np, abs=atol))
 
         if torch.cuda.is_available():
-            rf_r_0_cp = cp.random.rand(*shape).astype(cp.double)
+            tmp_cp = cp.random.rand(*shape)
+            rf_r_0_cp = tmp.astype(cp.double, copy=False)
             rf_r_1_cp = utils.rf_c2r(utils.rf_r2c(rf_r_0_cp))
             assert(cp.asnumpy(rf_r_0_cp) ==
                    pytest.approx(cp.asnumpy(rf_r_1_cp), abs=atol))
@@ -72,6 +74,15 @@ class Test_utils:
         assert(torch.all(rf0.norm(dim=1) <= rfmax))
         tρ, θ = utils.rf2tρθ(rf0, rfmax)
         rf1 = utils.tρθ2rf(tρ, θ, rfmax)
+        assert(to_np(rf0) == pytest.approx(to_np(rf1), abs=atol))
+        return
+
+    def test_rfclamplogit(self):
+        shape, rfmax, atol = (1, 2, 10), rfmax0, self.atol
+        rf0 = utils.rfclamp(rfmax0*((torch.rand(shape)-0.5)*4), rfmax)
+        assert(torch.all(rf0.norm(dim=1) <= rfmax))
+        lρ, θ = utils.rf2lρθ(rf0, rfmax)
+        rf1 = utils.lρθ2rf(lρ, θ, rfmax)
         assert(to_np(rf0) == pytest.approx(to_np(rf1), abs=atol))
         return
 
