@@ -64,13 +64,12 @@ class BlochSim(Function):
 
         if T1 is None:  # relaxations ignored
             E = e1_1 = None
-            fn_relax_ = lambda m1: None  # noqa: E731
+            fn_relax_ = lambda m1: None
         else:
             E1, E2 = -dt/T1, -dt/T2
             E1.exp_(), E2.exp_()  # should have fewer alloc than exp(-dt/T1)
             E, e1_1 = torch.cat((E2, E2, E1), dim=-2), E1-1
-            fn_relax_ = lambda m1: (m1.mul_(E)  # noqa: E731
-                                    )[..., 2:3, :].sub_(e1_1)
+            fn_relax_ = lambda m1: (m1.mul_(E))[..., 2:3, :].sub_(e1_1)
 
         # Pre-allocate intermediate variables, in case of overhead alloc's
         u = torch.empty(Mi.shape, **tkw)  # (N, *Nd, xyz, 1)
@@ -150,10 +149,10 @@ class BlochSim(Function):
 
         # assert((E is None) == (e1_1 is None))  # both or neither
         if E is None:  # relaxations ignored
-            fn_relax_h1_ = lambda h1: None  # noqa: E731
-            fn_relax_m1_ = lambda m1: None  # noqa: E731
+            fn_relax_h1_ = lambda h1: None
+            fn_relax_m1_ = lambda m1: None
         else:
-            fn_relax_h1_ = lambda h1: h1.mul_(E)  # noqa: E731
+            fn_relax_h1_ = lambda h1: h1.mul_(E)
 
             def fn_relax_m1_(m1):
                 m1[..., 2:3, :].add_(e1_1)

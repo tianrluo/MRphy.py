@@ -26,7 +26,7 @@ class Test_sims:
         *Note*:
         This test relies on the correctness of `test_slowsims.py`.
         """
-        f_t2np = lambda x: x.detach().clone().cpu().numpy()  # noqa: E731
+        f_t2np = lambda x: x.detach().clone().cpu().numpy()
 
         print('\n')
         dkw, atol = self.dkw, self.atol
@@ -145,7 +145,7 @@ class Test_sims:
         *Note*:
         This test relies on the correctness of `test_slowsims.py`.
         """
-        f_t2np = lambda x: x.detach().clone().cpu().numpy()  # noqa: E731
+        f_t2np = lambda x: x.detach().clone().cpu().numpy()
 
         print('\n')
         dkw, atol = self.dkw, self.atol

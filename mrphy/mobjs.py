@@ -165,7 +165,7 @@ class Pulse(object):
         """
         device = self.device
         loc = loc.to(device=device)
-        fn = lambda x: None if x is None else x.to(device=device)  # noqa: E731
+        fn = lambda x: None if x is None else x.to(device=device)
         Δf, b1Map, γ = (fn(x) for x in (Δf, b1Map, γ))
 
         return beffective.rfgr2beff(self.rf, self.gr, loc,
@@ -197,9 +197,8 @@ class Pulse(object):
         dkw = {'device': self.device, 'dtype': self.dtype}
         kw = {'axis': axis, 'kind': kind, 'copy': False, 'assume_sorted': True}
 
-        f_np = lambda x: x.detach().cpu().numpy()  # noqa: E731
-        f_0 = lambda x: np.dstack((np.zeros_like(x[:, :, [0]]),  # noqa: E731
-                                   x))
+        f_np = lambda x: x.detach().cpu().numpy()
+        f_0 = lambda x: np.dstack((np.zeros_like(x[:, :, [0]]), x))
 
         # convert to np array, then prepend 0's.
         rf_np, gr_np = f_0(f_np(self.rf)), f_0(f_np(self.gr))

@@ -60,8 +60,7 @@ class Test_utils:
         rf_r_1_np = utils.rf_c2r(utils.rf_r2c(rf_r_0_np))
         assert(rf_r_0_np == pytest.approx(rf_r_1_np, abs=atol))
 
-        if torch.cuda.is_available():
-            tmp_cp = cp.random.rand(*shape)
+        if __CUPY_IS_AVAILABLE__:
             rf_r_0_cp = tmp.astype(cp.double, copy=False)
             rf_r_1_cp = utils.rf_c2r(utils.rf_r2c(rf_r_0_cp))
             assert(cp.asnumpy(rf_r_0_cp) ==
