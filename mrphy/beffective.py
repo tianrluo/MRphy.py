@@ -39,8 +39,10 @@ def beff2uϕ(beff: Tensor, γ2πdt: Tensor, *, dim=-1) -> Tuple[Tensor, Tensor]:
 
 def beff2ab(
     beff: Tensor, *,
-    E1: Tensor = tensor(0.), E2: Tensor = tensor(0.), γ: Tensor = γH,
-    dt: Tensor = dt0
+    E1: Tensor = tensor(0.),
+    E2: Tensor = tensor(0.),
+    γ: Tensor = γH,
+    dt: Tensor = dt0,
 ) -> Tuple[Tensor, Tensor]:
     r"""Compute Hargreave's 𝐴/𝐵, mat/vec, from B-effectives
 
@@ -50,7 +52,7 @@ def beff2ab(
         ``A, B = beff2ab(beff, *, E1, E2, γ, dt)``
 
     Inputs:
-        - ``beff``: `(N,*Nd,xyz,nT)`, B-effective.
+        - ``beff``: `(N,*Nd,nT,xyz)`, B-effective.
     Optionals:
         - ``T1``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T1 relaxation.
         - ``T2``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T2 relaxation.
@@ -74,7 +76,7 @@ def beff2ab(
     E1_1 = E1.squeeze(dim=-1) - 1
 
     # C/Python `reshape/view` is different from Fortran/MatLab/Julia `reshape`
-    NNd, nT = shape[0:-2], shape[-1]
+    NNd, nT = shape[0:-2], shape[-2]
     s1, s0 = NNd+(1, 1), NNd+(1, 4)
 
     AB = torch.cat([torch.ones(s1, **dkw), torch.zeros(s0, **dkw),
@@ -84,7 +86,7 @@ def beff2ab(
 
     # simulation
     for t in range(nT):
-        u, ϕ = beff2uϕ(beff[..., t], γ2πdt)
+        u, ϕ = beff2uϕ(beff[..., t, :], γ2πdt)
 
         if torch.any(ϕ != 0):
             AB1 = utils.uϕrot(u, ϕ, AB)

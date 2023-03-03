@@ -59,16 +59,17 @@ class Test_slowsims:
 
         rf.requires_grad, gr.requires_grad = True, True
 
-        beff = beffective.rfgr2beff(rf, gr, loc, Δf=Δf, b1Map=b1Map, γ=γ)
+        beff_old = beffective.rfgr2beff(rf, gr, loc, Δf=Δf, b1Map=b1Map, γ=γ)
+        beff = beff_old.transpose(-1, -2)  # (..., xyz, nT) → (..., nT, xyz)
 
         A, B = beffective.beff2ab(beff, E1=E1, E2=E2, γ=γ, dt=dt)
 
         # sim
-        Mo1 = slowsims.blochsim(M0, beff, T1=T1, T2=T2, γ=γ, dt=dt)
+        Mo1 = slowsims.blochsim(M0, beff_old, T1=T1, T2=T2, γ=γ, dt=dt)
 
         Mo2, Mo_tmp = M0.clone(), M0.clone()
         for t in range(nT):
-            Mo2, _ = slowsims.blochsim_1step(Mo2, Mo_tmp, beff[..., t],
+            Mo2, _ = slowsims.blochsim_1step(Mo2, Mo_tmp, beff[..., t, :],
                                              E1, E1_1, E2, γ2πdt)
 
         Mo3 = slowsims.blochsim_ab(M0, A, B)

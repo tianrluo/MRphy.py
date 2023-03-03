@@ -13,8 +13,13 @@ __all__ = ['blochsim_1step', 'blochsim', 'blochsim_ab', 'freeprec']
 
 
 def blochsim_1step(
-    M: Tensor, M1: Tensor, b: Tensor,
-    E1: Tensor, E1_1: Tensor, E2: Tensor, γ2πdt: Tensor
+    M: Tensor,
+    M1: Tensor,
+    b: Tensor,
+    E1: Tensor,
+    E1_1: Tensor,
+    E2: Tensor,
+    γ2πdt: Tensor,
 ) -> Tuple[Tensor, Tensor]:
     r"""Single step bloch simulation
 
