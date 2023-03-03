@@ -61,7 +61,10 @@ class Test_sims:
                         10*torch.atan(t - round(nT/2))/π], 1)  # (1,xyz,nT)
 
         # rf.requires_grad, gr.requires_grad = True, True
-        beff = beffective.rfgr2beff(rf, gr, loc, Δf=Δf, b1Map=b1Map, γ=γ)
+        beff_old = beffective.rfgr2beff(rf, gr, loc, Δf=Δf, b1Map=b1Map, γ=γ)
+        beff_old.requires_grad = True
+        # (..., xyz, nT) → (..., nT, xyz)
+        beff = beff_old.transpose(-1, -2).clone().detach()
         beff.requires_grad = True
 
         # Check handling of 1-coil `rf`, `b1Map` that omitted the `nCoils` dim
@@ -79,12 +82,13 @@ class Test_sims:
         res1a.backward()  # keep graph to check `bar.backward()`
         print('backward: slowsims.blochsim', time.time() - t)
         grad_M0_1a = f_t2np(M0.grad)
-        grad_beff_1a = f_t2np(beff.grad)
+        # (..., nT, xyz) → (..., xyz, nT)
+        grad_beff_old_1a = f_t2np(beff.grad.transpose(-1, -2))
 
-        M0.grad, beff.grad = None, None
+        M0.grad, beff_old.grad, beff.grad = None, None, None
 
         t = time.time()
-        Mo_2a = sims.blochsim(M0, beff, T1=T1, T2=T2, γ=γ, dt=dt)
+        Mo_2a = sims.blochsim(M0, beff_old, T1=T1, T2=T2, γ=γ, dt=dt)
         print('forward: sims.blochsim', time.time() - t)
 
         res2a = torch.sum(Mo_2a)
@@ -92,16 +96,16 @@ class Test_sims:
         res2a.backward()  # keep graph to check `bar.backward()`
         print('backward: sims.blochsim', time.time() - t)
         grad_M0_2a = f_t2np(M0.grad)
-        grad_beff_2a = f_t2np(beff.grad)
+        grad_beff_old_2a = f_t2np(beff_old.grad)
 
-        M0.grad, beff.grad = None, None
+        M0.grad, beff_old.grad, beff.grad = None, None, None
 
         # %% assertion
-        assert(pytest.approx(f_t2np(beff), abs=atol)
+        assert(pytest.approx(f_t2np(beff_old), abs=atol)
                == f_t2np(beff_missing_dim))
 
         assert(pytest.approx(grad_M0_1a, abs=atol) == grad_M0_2a)
-        assert(pytest.approx(grad_beff_1a, abs=atol) == grad_beff_2a)
+        assert(pytest.approx(grad_beff_old_1a, abs=atol) == grad_beff_old_2a)
 
         # %% sim w/o relaxations
         print('\nblochsim tests (no relaxations):')
@@ -110,15 +114,16 @@ class Test_sims:
         res1b = torch.sum(Mo_1b)
         res1b.backward()  # keep graph to check `bar.backward()`
         grad_M0_1b = f_t2np(M0.grad)
-        grad_beff_1b = f_t2np(beff.grad)
+        # (..., nT, xyz) → (..., xyz, nT)
+        grad_beff_old_1b = f_t2np(beff.grad.transpose(-1, -2))
 
         # dur_f, dur_b, n_repeat = 0., 0., 1000
         dur_f, dur_b, n_repeat = 0., 0., 1
         for _ in range(n_repeat):
-            M0.grad, beff.grad = None, None
+            M0.grad, beff_old.grad, beff.grad = None, None, None
 
             t = time.time()
-            Mo_2b = sims.blochsim(M0, beff, T1=None, T2=None, γ=γ, dt=dt)
+            Mo_2b = sims.blochsim(M0, beff_old, T1=None, T2=None, γ=γ, dt=dt)
             dur_f += time.time() - t
 
             res2b = torch.sum(Mo_2b)
@@ -132,13 +137,13 @@ class Test_sims:
 
         print('backward: sims.blochsim', dur_b/n_repeat)
         grad_M0_2b = f_t2np(M0.grad)
-        grad_beff_2b = f_t2np(beff.grad)
+        grad_beff_old_2b = f_t2np(beff_old.grad)
 
-        M0.grad, beff.grad = None, None
+        M0.grad, beff_old.grad, beff.grad = None, None, None
 
         # %% assertion
         assert(pytest.approx(grad_M0_1b, abs=atol) == grad_M0_2b)
-        assert(pytest.approx(grad_beff_1b, abs=atol) == grad_beff_2b)
+        assert(pytest.approx(grad_beff_old_1b, abs=atol) == grad_beff_old_2b)
 
     def test_freeprec(self):
         """

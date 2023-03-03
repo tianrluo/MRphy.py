@@ -65,7 +65,7 @@ class Test_slowsims:
         A, B = beffective.beff2ab(beff, E1=E1, E2=E2, γ=γ, dt=dt)
 
         # sim
-        Mo1 = slowsims.blochsim(M0, beff_old, T1=T1, T2=T2, γ=γ, dt=dt)
+        Mo1 = slowsims.blochsim(M0, beff, T1=T1, T2=T2, γ=γ, dt=dt)
 
         Mo2, Mo_tmp = M0.clone(), M0.clone()
         for t in range(nT):
