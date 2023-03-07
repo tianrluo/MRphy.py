@@ -146,9 +146,10 @@ class Pulse(object):
         return d
 
     def beff(
-            self, loc: Tensor, *,
-            Δf: Optional[Tensor] = None, b1Map: Optional[Tensor] = None,
-            γ: Tensor = γH
+        self, loc: Tensor, *,
+        Δf: Optional[Tensor] = None,
+        b1Map: Optional[Tensor] = None,
+        γ: Tensor = γH
     ) -> Tensor:
         r"""Compute B-effective of provided location from the pulse
 
@@ -168,8 +169,11 @@ class Pulse(object):
         fn = lambda x: None if x is None else x.to(device=device)
         Δf, b1Map, γ = (fn(x) for x in (Δf, b1Map, γ))
 
-        return beffective.rfgr2beff(self.rf, self.gr, loc,
-                                    Δf=Δf, b1Map=b1Map, γ=γ)
+        rf, gr = self.rf, self.gr
+        beff = beffective.rfgr2beff(rf, gr, loc, Δf=Δf, b1Map=b1Map, γ=γ)
+        beff_old = beff.transpose(-2, -1)  # (..., nT, xyz) → (..., xyz, nT)
+
+        return beff_old
 
     def interpT(self, dt: Tensor, *, kind: str = 'linear') -> 'Pulse':
         r""" Interpolate pulse of `dt` by `kind`.

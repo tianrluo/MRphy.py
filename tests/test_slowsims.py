@@ -59,8 +59,7 @@ class Test_slowsims:
 
         rf.requires_grad, gr.requires_grad = True, True
 
-        beff_old = beffective.rfgr2beff(rf, gr, loc, Δf=Δf, b1Map=b1Map, γ=γ)
-        beff = beff_old.transpose(-1, -2)  # (..., xyz, nT) → (..., nT, xyz)
+        beff = beffective.rfgr2beff(rf, gr, loc, Δf=Δf, b1Map=b1Map, γ=γ)
 
         A, B = beffective.beff2ab(beff, E1=E1, E2=E2, γ=γ, dt=dt)
 

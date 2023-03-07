@@ -105,8 +105,12 @@ def beff2ab(
 
 
 def rfgr2beff(
-    rf: Tensor, gr: Tensor, loc: Tensor, *,
-    Δf: Optional[Tensor] = None, b1Map: Optional[Tensor] = None, γ: Tensor = γH
+    rf: Tensor,
+    gr: Tensor,
+    loc: Tensor, *,
+    Δf: Optional[Tensor] = None,
+    b1Map: Optional[Tensor] = None,
+    γ: Tensor = γH
 ) -> Tensor:
     r"""Compute B-effectives from rf and gradients
 
@@ -122,7 +126,7 @@ def rfgr2beff(
         - ``b1Map``: `(N, *Nd, xy (, nCoils)`, a.u., transmit sensitivity.
         - ``γ``:  `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Hz/Gauss", gyro ratio.
     Outputs:
-        - ``beff``: `(N,*Nd,xyz,nT)`, "Gauss"
+        - ``beff``: `(N,*Nd,nT,xyz)`, "Gauss"
     """
     assert(rf.device == gr.device == loc.device)
     device = rf.device
@@ -130,21 +134,21 @@ def rfgr2beff(
     shape = loc.shape
     N, Nd, ndim = shape[0], shape[1:-1], loc.ndim-2
 
-    Bz = (loc.reshape(N, -1, 3) @ gr).reshape((N, *Nd, 1, -1))
+    Bz = (loc.reshape(N, -1, 3) @ gr).reshape((N, *Nd, -1))
 
-    if Δf is not None:  # Δf: -> (N, *Nd, 1, 1); 3 from 1(dim-N) + 2(dim-xtra)
+    if Δf is not None:  # Δf: -> (N, *Nd, 1); 3 from 1(dim-N) + 2(dim-xtra)
         γ = γ.to(device=device)
-        Δf, γ = (x.reshape(x.shape+(ndim+3-x.ndim)*(1,)) for x in (Δf, γ))
+        Δf, γ = (_.reshape(_.shape+(ndim+2-_.ndim)*(1,)) for _ in (Δf, γ))
         Bz += Δf/γ
 
     # rf -> (N, *len(Nd)*(1,), xy, nT, (nCoils))
     rf = rf.reshape((-1,) + ndim*(1,) + rf.shape[1:])
     # Real as `Bx`, Imag as `By`.
     if b1Map is None:
-        if rf.ndim == Bz.ndim+1:  # (N, *len(Nd)*(1,), xy, nT, nCoils)
+        if rf.ndim == Bz.ndim+2:  # (N, *len(Nd)*(1,), xy, nT, nCoils)
             rf = torch.sum(rf, dim=-1)  # -> (N, *len(Nd)*(1,), xy, nT)
 
-        Bx, By = rf[..., 0:1, :].expand_as(Bz), rf[..., 1:2, :].expand_as(Bz)
+        Bx, By = rf[..., 0, :].expand_as(Bz), rf[..., 1, :].expand_as(Bz)
     else:
         if b1Map.ndim == 1+len(Nd)+1:
             b1Map = b1Map[..., None]  # (N, *Nd, xy) -> (N, *Nd, xy, 1)
@@ -153,12 +157,12 @@ def rfgr2beff(
 
         b1Map = b1Map.to(device)
         b1Map = b1Map[..., None, :]  # -> (N, *Nd, xy, 1, nCoils)
-        Bx = torch.sum((b1Map[..., 0:1, :, :]*rf[..., 0:1, :, :]
-                        - b1Map[..., 1:2, :, :]*rf[..., 1:2, :, :]),
+        Bx = torch.sum((b1Map[..., 0, :, :]*rf[..., 0, :, :]
+                        - b1Map[..., 1, :, :]*rf[..., 1, :, :]),
                        dim=-1).expand_as(Bz)  # -> (N, *Nd, x, nT)
-        By = torch.sum((b1Map[..., 0:1, :, :]*rf[:, :, 1:2, ...]
-                        + b1Map[..., 1:2, :, :]*rf[:, :, 0:1, ...]),
+        By = torch.sum((b1Map[..., 0, :, :]*rf[:, :, 1, ...]
+                        + b1Map[..., 1, :, :]*rf[:, :, 0, ...]),
                        dim=-1).expand_as(Bz)  # -> (N, *Nd, y, nT)
 
-    beff = torch.cat([Bx, By, Bz], dim=-2)  # -> (N, *Nd, xyz, nT)
+    beff = torch.stack([Bx, By, Bz], dim=-1)  # -> (N, *Nd, nT, xyz)
     return beff

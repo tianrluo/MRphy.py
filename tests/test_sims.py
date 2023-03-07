@@ -61,11 +61,12 @@ class Test_sims:
                         10*torch.atan(t - round(nT/2))/π], 1)  # (1,xyz,nT)
 
         # rf.requires_grad, gr.requires_grad = True, True
-        beff_old = beffective.rfgr2beff(rf, gr, loc, Δf=Δf, b1Map=b1Map, γ=γ)
-        beff_old.requires_grad = True
-        # (..., xyz, nT) → (..., nT, xyz)
-        beff = beff_old.transpose(-1, -2).clone().detach()
+        beff = beffective.rfgr2beff(rf, gr, loc, Δf=Δf, b1Map=b1Map, γ=γ)
         beff.requires_grad = True
+
+        # (..., nT, xyz) → (..., xyz, nT)
+        beff_old = beff.transpose(-1, -2).clone().detach()
+        beff_old.requires_grad = True
 
         # Check handling of 1-coil `rf`, `b1Map` that omitted the `nCoils` dim
         beff_missing_dim = beffective.rfgr2beff(rf[..., 0], gr, loc, Δf=Δf,
@@ -101,7 +102,7 @@ class Test_sims:
         M0.grad, beff_old.grad, beff.grad = None, None, None
 
         # %% assertion
-        assert(pytest.approx(f_t2np(beff_old), abs=atol)
+        assert(pytest.approx(f_t2np(beff), abs=atol)
                == f_t2np(beff_missing_dim))
 
         assert(pytest.approx(grad_M0_1a, abs=atol) == grad_M0_2a)
