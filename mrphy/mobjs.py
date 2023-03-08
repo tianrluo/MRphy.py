@@ -171,9 +171,8 @@ class Pulse(object):
 
         rf, gr = self.rf, self.gr
         beff = beffective.rfgr2beff(rf, gr, loc, Δf=Δf, b1Map=b1Map, γ=γ)
-        beff_old = beff.transpose(-2, -1)  # (..., nT, xyz) → (..., xyz, nT)
 
-        return beff_old
+        return beff
 
     def interpT(self, dt: Tensor, *, kind: str = 'linear') -> 'Pulse':
         r""" Interpolate pulse of `dt` by `kind`.
