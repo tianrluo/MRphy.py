@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>mrphy.beffective &mdash; MRphy.py 0.1.12 documentation</title>
+  <title>mrphy.beffective &mdash; MRphy.py 0.2.0 documentation</title>
       <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
   
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
         <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -27,11 +27,15 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-            <a href="index.html" class="icon icon-home"> MRphy.py
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            MRphy.py
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -41,7 +45,12 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="__init__.html">mrphy.__init__</a></li>
 <li class="toctree-l1"><a class="reference internal" href="utils.html">mrphy.utils</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">mrphy.beffective</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">mrphy.beffective</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#mrphy.beffective.beff2ab"><code class="docutils literal notranslate"><span class="pre">beff2ab()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mrphy.beffective.beff2u"><code class="docutils literal notranslate"><span class="pre">beff2uφ()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mrphy.beffective.rfgr2beff"><code class="docutils literal notranslate"><span class="pre">rfgr2beff()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="sims.html">mrphy.sims</a></li>
 <li class="toctree-l1"><a class="reference internal" href="slowsims.html">mrphy.slowsims</a></li>
 <li class="toctree-l1"><a class="reference internal" href="mobjs.html">mrphy.mobjs</a></li>
@@ -60,8 +69,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>mrphy.beffective</li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">mrphy.beffective</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/beffective.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -72,18 +81,18 @@
            <div itemprop="articleBody">
              
   <section id="module-mrphy.beffective">
-<span id="mrphy-beffective"></span><h1>mrphy.beffective<a class="headerlink" href="#module-mrphy.beffective" title="Permalink to this headline"></a></h1>
+<span id="mrphy-beffective"></span><h1>mrphy.beffective<a class="headerlink" href="#module-mrphy.beffective" title="Permalink to this heading"></a></h1>
 <p>B-effective related functions</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="mrphy.beffective.beff2ab">
-<span class="sig-prename descclassname"><span class="pre">mrphy.beffective.</span></span><span class="sig-name descname"><span class="pre">beff2ab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">beff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">E1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor(0.)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">E2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor(0.)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">γ</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor(4257.6000,</span> <span class="pre">dtype=torch.float64)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor(4.0000e-06,</span> <span class="pre">dtype=torch.float64)</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#mrphy.beffective.beff2ab" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">mrphy.beffective.</span></span><span class="sig-name descname"><span class="pre">beff2ab</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">beff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">E1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor(0.)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">E2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor(0.)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">γ</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor(4257.6000,</span> <span class="pre">dtype=torch.float64)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor(4.0000e-06,</span> <span class="pre">dtype=torch.float64)</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#mrphy.beffective.beff2ab" title="Permalink to this definition"></a></dt>
 <dd><p>Compute Hargreave’s 𝐴/𝐵, mat/vec, from B-effectives</p>
 <p>See: <a class="reference external" href="https://doi.org/10.1002/mrm.1170">doi:10.1002/mrm.1170</a>.</p>
 <dl class="simple">
 <dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">A,</span> <span class="pre">B</span> <span class="pre">=</span> <span class="pre">beff2ab(beff,</span> <span class="pre">*,</span> <span class="pre">E1,</span> <span class="pre">E2,</span> <span class="pre">γ,</span> <span class="pre">dt)</span></code></p>
 </dd>
 <dt>Inputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">beff</span></code>: <cite>(N,*Nd,xyz,nT)</cite>, B-effective.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">beff</span></code>: <cite>(N,*Nd,nT,xyz)</cite>, B-effective.</p></li>
 </ul>
 </dd>
 <dt>Optionals:</dt><dd><ul class="simple">
@@ -103,7 +112,7 @@
 
 <dl class="py function">
 <dt class="sig sig-object py" id="mrphy.beffective.beff2u">
-<span id="mrphy.beffective.beff2uφ"></span><span class="sig-prename descclassname"><span class="pre">mrphy.beffective.</span></span><span class="sig-name descname"><span class="pre">beff2uφ</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">beff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">γ2πdt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-</span> <span class="pre">1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#mrphy.beffective.beff2u" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">mrphy.beffective.</span></span><span class="sig-name descname"><span class="pre">beff2uφ</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">beff</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">γ2πdt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dim</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#mrphy.beffective.beff2u" title="Permalink to this definition"></a></dt>
 <dd><p>Compute rotation axes and angles from B-effectives</p>
 <dl class="simple">
 <dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">U,</span> <span class="pre">Φ</span> <span class="pre">=</span> <span class="pre">beff2uϕ(beff,</span> <span class="pre">γ2πdt,</span> <span class="pre">*,</span> <span class="pre">dim)</span></code></p>
@@ -127,7 +136,7 @@
 
 <dl class="py function">
 <dt class="sig sig-object py" id="mrphy.beffective.rfgr2beff">
-<span class="sig-prename descclassname"><span class="pre">mrphy.beffective.</span></span><span class="sig-name descname"><span class="pre">rfgr2beff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Δf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b1Map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">torch.Tensor</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">γ</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">torch.Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor(4257.6000,</span> <span class="pre">dtype=torch.float64)</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">torch.Tensor</span></span></span><a class="headerlink" href="#mrphy.beffective.rfgr2beff" title="Permalink to this definition"></a></dt>
+<span class="sig-prename descclassname"><span class="pre">mrphy.beffective.</span></span><span class="sig-name descname"><span class="pre">rfgr2beff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Δf</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">b1Map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">γ</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor(4257.6000,</span> <span class="pre">dtype=torch.float64)</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="headerlink" href="#mrphy.beffective.rfgr2beff" title="Permalink to this definition"></a></dt>
 <dd><p>Compute B-effectives from rf and gradients</p>
 <dl class="simple">
 <dt>Usage:</dt><dd><p><code class="docutils literal notranslate"><span class="pre">beff</span> <span class="pre">=</span> <span class="pre">rfgr2beff(rf,</span> <span class="pre">gr,</span> <span class="pre">loc,</span> <span class="pre">*,</span> <span class="pre">Δf,</span> <span class="pre">b1Map,</span> <span class="pre">γ)</span></code></p>
@@ -145,7 +154,7 @@
 </ul>
 </dd>
 <dt>Outputs:</dt><dd><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">beff</span></code>: <cite>(N,*Nd,xyz,nT)</cite>, “Gauss”</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">beff</span></code>: <cite>(N,*Nd,nT,xyz)</cite>, “Gauss”</p></li>
 </ul>
 </dd>
 </dl>
