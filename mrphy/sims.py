@@ -77,46 +77,57 @@ class BlochSim(Function):
             fn_relax_ = lambda m1: (m1.mul_(E))[..., 2:3].sub_(e1_1)
 
         # Pre-allocate intermediate variables, in case of overhead alloc's
-        u = torch.empty(Mi.shape, **tkw)  # (N, *Nd, xyz, 1)
-        ϕ, cϕ_1, sϕ = (torch.empty(NNd+(1, 1), **tkw) for _ in range(3))
+        v = torch.empty(Mi.shape, **tkw)  # (N, *Nd, xyz, 1)
 
         # %% Other variables to be cached
-        m0, Mhst = Mi, torch.empty(NNd+(nT, 3), **tkw)
+        m0 = Mi
+        Mhst = torch.empty(NNd+(nT, 3), **tkw)
+        Φ = torch.empty(NNd+(nT, 1), **tkw)
+        cΦ_1 = torch.empty(NNd+(nT, 1), **tkw)
+        sΦ = torch.empty(NNd+(nT, 1), **tkw)
+        UtM0 = torch.empty(NNd+(nT, 1), **tkw)
 
         # %% Simulation. could we learn to live right.
-        for m1, γbeff in zip(Mhst.split(1, dim=-2), γBeff.split(1, dim=-2)):
+        for m1, γbeff, ϕ, cϕ_1, sϕ, utm0 in zip(
+            Mhst.split(1, dim=-2),
+            γBeff.split(1, dim=-2),
+            Φ.split(1, dim=-2),
+            cΦ_1.split(1, dim=-2),
+            sΦ.split(1, dim=-2),
+            UtM0.split(1, dim=-2),
+        ):
             # Rotation
             torch.norm(γbeff, dim=-1, keepdim=True, out=ϕ)
             ϕ.clamp_(min=1e-12)
-            torch.div(γbeff, ϕ, out=u)
+            torch.div(γbeff, ϕ, out=γbeff)
+            u = γbeff
 
             torch.sin(ϕ, out=sϕ)
             torch.cos(ϕ, out=cϕ_1)
             cϕ_1.sub_(1)  # (cϕ-1)
-
-            ϕ.clamp_(min=1e-12)
-            torch.div(γbeff, ϕ, out=u)
 
             # wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
             # Angle is `-ϕ` as Bloch-eq is 𝑀×𝐵
             # m₁ = R(u, -ϕ)m₀ = cϕ*m₀ + (1-cϕ)*uᵀm₀*u - sϕ*u×m₀
             # m₁ = m₀ - sϕ*u×m₀ + (cϕ-1)*(m₀ - uᵀm₀*u), in-place friendly
             torch.mul(u, m0, out=m1)  # using m₁ as an temporary storage
-            torch.sum(m1, dim=-1, keepdim=True, out=ϕ)  # ϕ reused as uᵀm₀
+            torch.sum(m1, dim=-1, keepdim=True, out=utm0)
 
             torch.cross(u, m0, dim=-1, out=m1)  # u×m₀
             torch.addcmul(m0, sϕ, m1, value=-1, out=m1)  # m₀ - sϕ*(u×m₀)
 
-            torch.addcmul(m0, ϕ, u, value=-1, out=u)  # m₀ - uᵀm₀*u
+            torch.addcmul(m0, utm0, u, value=-1, out=v)  # m₀ - uᵀm₀*u
 
-            torch.addcmul(m1, cϕ_1, u, out=m1)  # m₀-sϕ*u×m₀+(cϕ-1)*(m₀-uᵀm₀*u)
+            torch.addcmul(m1, cϕ_1, v, out=m1)  # m₀-sϕ*u×m₀+(cϕ-1)*(m₀-uᵀm₀*u)
 
             # Relaxation
             fn_relax_(m1)
 
             m0 = m1
 
-        ctx.save_for_backward(Mi, Mhst, γBeff, E, e1_1, γ2πdt)
+        ctx.save_for_backward(
+            Mi, Mhst, γBeff, Φ, cΦ_1, sΦ, UtM0, E, e1_1, γ2πdt
+        )
         Mo = Mhst[..., -1, :].clone()  # -> (N, *Nd, xyz)
         return Mo
 
@@ -147,7 +158,7 @@ class BlochSim(Function):
 
         # %% Jacobians. If we turn back time,
         # ctx.save_for_backward(Mi, Mhst, γBeff, E, e1_1, γ2πdt)
-        Mi, Mhst, γBeff, E, e1_1, γ2πdt = ctx.saved_tensors
+        Mi, Mhst, γBeff, Φ, cΦ_1, sΦ, UtM0, E, e1_1, γ2πdt = ctx.saved_tensors
         NNd = γBeff.shape[:-2]
         # (t)ensor (k)ey(w)ord, contiguous to avoid alloc/copy when reshape
         tkw = {'memory_format': _contiguous_format,
@@ -169,8 +180,7 @@ class BlochSim(Function):
         h0 = torch.empty(NNd+(1, 3), **tkw)
 
         u, uxh1 = (torch.empty(NNd+(1, 3), **tkw) for _ in range(2))
-        ϕ, cϕ_1, sϕ, utm0, uth1 = (torch.empty(NNd+(1, 1), **tkw)
-                                   for _ in range(5))
+        ϕ, cϕ_1, sϕ, uth1 = (torch.empty(NNd+(1, 1), **tkw) for _ in range(4))
         # ϕis0 = torch.empty(NNd+(1, 1),
         #                    memory_format=tkw['memory_format'],
         #                    device=tkw['device'], dtype=torch.bool)
@@ -182,30 +192,25 @@ class BlochSim(Function):
 
         # scale by -γ2πdt, so output ∂L/∂B no longer needs multiply by -γ2πdt
         h1.mul_(-γ2πdt)
-        for m0, γbeff in zip(reversed((Mi,)+Mhst.split(1, dim=-2)[:-1]),
-                             reversed(γBeff.split(1, dim=-2))):
+        for m0, γbeff, ϕ, cϕ_1, sϕ, utm0 in zip(
+            reversed((Mi,)+Mhst.split(1, dim=-2)[:-1]),
+            reversed(γBeff.split(1, dim=-2)),
+            reversed(Φ.split(1, dim=-2)),
+            reversed(cΦ_1.split(1, dim=-2)),
+            reversed(sΦ.split(1, dim=-2)),
+            reversed(UtM0.split(1, dim=-2)),
+        ):
             # %% Ajoint Relaxation:
             fn_relax_h1_(h1)  # h₁ → h̃₁ ≔ ∂L/∂m̃₁ = E∂L/∂m₁
             fn_relax_m1_(m1)  # m₁ → m̃₁ ≔ Rm₀ = E⁻¹m₁
 
             # %% Adjoint Rotations:
-            # Prepare all the elements
-            torch.norm(γbeff, dim=-1, keepdim=True, out=ϕ)
-            # compute `sin`, `cos` before `ϕ.clamp_()`
-            torch.sin(ϕ, out=sϕ)
-            torch.cos(ϕ, out=cϕ_1)
-            cϕ_1.sub_(1)
-
-            ϕ.clamp_(min=1e-12)
-            torch.div(γbeff, ϕ, out=u)
+            u.copy_(γbeff)
 
             # TODO: Resolve singularities of ϕ=0, control pov?
             # torch.logical_not(ϕ, out=ϕis0)
             # if torch.any(ϕis0):
             #     u[ϕis0[..., 0, 0]] = u_dflt
-
-            torch.mul(u, m0, out=h0)
-            torch.sum(h0, dim=-1, keepdim=True, out=utm0)  # uᵀm₀
 
             # %% Assemble h₀: (R(u, -ϕ)ᵀ ≡ R(u, ϕ))
             # h₀ ≔ R(u, ϕ)h̃₁ = cϕ*h₁ + (1-cϕ)*uᵀh₁*u + sϕ*u×h₁
