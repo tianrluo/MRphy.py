@@ -168,7 +168,11 @@ def rf_r2c(rf: ndarrayA) -> ndarrayA:
     return rf[:, [0], ...] + 1j*rf[:, [1], ...]
 
 
-def rf2lρθ(rf: Tensor, rfmax: Tensor) -> Tuple[Tensor, Tensor]:
+def rf2lρθ(
+    rf: Tensor,
+    rfmax: Tensor, *,
+    eps: Number = 1e-7
+) -> Tuple[Tensor, Tensor]:
     """Convert real RF to tρ ≔ tan(ρ/ρ_max⋅π/2), and θ
 
     Usage:
@@ -184,7 +188,7 @@ def rf2lρθ(rf: Tensor, rfmax: Tensor) -> Tuple[Tensor, Tensor]:
         :func:`~mrphy.utils.lρθ2rf`
     """
     rfmax = rfmax[None] if rfmax.ndim == 0 else rfmax  # scalar to 1d-tensor
-    lρ = (rf.norm(dim=1, keepdim=True)/rfmax[:, None, None, ...]).logit()
+    lρ = (rf.norm(dim=1, keepdim=True)/rfmax[:, None, None, ...]).logit(eps)
     θ = torch.atan2(rf[:, [1], :], rf[:, [0], :])
     return lρ, θ
 
