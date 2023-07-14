@@ -30,8 +30,13 @@ class BlochSim(Function):
 
     @staticmethod
     def forward(
-        ctx: CTX, Mi: Tensor, Beff: Tensor,
-        T1: Optional[Tensor], T2: Optional[Tensor], γ: Tensor, dt: Tensor
+        ctx: CTX,
+        Mi: Tensor,
+        Beff: Tensor,
+        T1: Optional[Tensor],
+        T2: Optional[Tensor],
+        γ: Tensor,
+        dt: Tensor
     ) -> Tensor:
         r"""Forward evolution of Bloch simulation
 
@@ -39,7 +44,7 @@ class BlochSim(Function):
             - ``ctx``: `(1,)`, pytorch CTX cacheing object
             - ``Mi``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium \
               [0 0 1]
-            - ``Beff``: `(N, *Nd, xyz, nT)`, "Gauss", B-effective, magnetic \
+            - ``Beff``: `(N, *Nd, nT, xyz)`, "Gauss", B-effective, magnetic \
               field.
             - ``T1``: `(N ⊻ 1, *Nd ⊻ len(Nd)*(1,), 1, 1)`, "Sec", T₁
             - ``T2``: `(N ⊻ 1, *Nd ⊻ len(Nd)*(1,), 1, 1)`, "Sec", T₂
@@ -48,7 +53,7 @@ class BlochSim(Function):
         Outputs:
             - ``Mo``: `(N, *Nd, xyz)`, Magetic spins after simulation.
         """
-        NNd, nT = Beff.shape[:-2], Beff.shape[-1]
+        NNd, nT = Beff.shape[:-2], Beff.shape[-2]
         # (t)ensor (k)ey(w)ord, contiguous to avoid alloc/copy when reshape
         tkw = {'memory_format': _contiguous_format,
                'dtype': Mi.dtype, 'device': Mi.device}
@@ -57,68 +62,79 @@ class BlochSim(Function):
         γ2πdt = 2*π*γ*dt
         γBeff = torch.empty(Beff.shape, **tkw)
         torch.mul(γ2πdt, Beff, out=γBeff)
-        Mi = Mi.clone(memory_format=_contiguous_format)[..., None]
+        Mi = Mi.clone(memory_format=_contiguous_format)[..., None, :]
         # γBeff = γ2πdt*Beff.contiguous()
 
         assert((T1 is None) == (T2 is None))  # both or neither
 
         if T1 is None:  # relaxations ignored
             E = e1_1 = None
-            fn_relax_ = lambda m1: None  # noqa: E731
+            fn_relax_ = lambda m1: None
         else:
             E1, E2 = -dt/T1, -dt/T2
             E1.exp_(), E2.exp_()  # should have fewer alloc than exp(-dt/T1)
-            E, e1_1 = torch.cat((E2, E2, E1), dim=-2), E1-1
-            fn_relax_ = lambda m1: (m1.mul_(E)  # noqa: E731
-                                    )[..., 2:3, :].sub_(e1_1)
+            E, e1_1 = torch.cat((E2, E2, E1), dim=-1), E1-1
+            fn_relax_ = lambda m1: (m1.mul_(E))[..., 2:3].sub_(e1_1)
 
         # Pre-allocate intermediate variables, in case of overhead alloc's
-        u = torch.empty(Mi.shape, **tkw)  # (N, *Nd, xyz, 1)
-        ϕ, cϕ_1, sϕ = (torch.empty(NNd+(1, 1), **tkw) for _ in range(3))
+        v = torch.empty(Mi.shape, **tkw)  # (N, *Nd, xyz, 1)
 
         # %% Other variables to be cached
-        m0, Mhst = Mi, torch.empty(NNd+(3, nT), **tkw)
+        m0 = Mi
+        Mhst = torch.empty(NNd+(nT, 3), **tkw)
+        Φ = torch.empty(NNd+(nT, 1), **tkw)
+        cΦ_1 = torch.empty(NNd+(nT, 1), **tkw)
+        sΦ = torch.empty(NNd+(nT, 1), **tkw)
+        UtM0 = torch.empty(NNd+(nT, 1), **tkw)
 
         # %% Simulation. could we learn to live right.
-        for m1, γbeff in zip(Mhst.split(1, dim=-1), γBeff.split(1, dim=-1)):
+        for m1, γbeff, ϕ, cϕ_1, sϕ, utm0 in zip(
+            Mhst.split(1, dim=-2),
+            γBeff.split(1, dim=-2),
+            Φ.split(1, dim=-2),
+            cΦ_1.split(1, dim=-2),
+            sΦ.split(1, dim=-2),
+            UtM0.split(1, dim=-2),
+        ):
             # Rotation
-            torch.norm(γbeff, dim=-2, keepdim=True, out=ϕ)
+            torch.norm(γbeff, dim=-1, keepdim=True, out=ϕ)
             ϕ.clamp_(min=1e-12)
-            torch.div(γbeff, ϕ, out=u)
+            torch.div(γbeff, ϕ, out=γbeff)
+            u = γbeff
 
             torch.sin(ϕ, out=sϕ)
             torch.cos(ϕ, out=cϕ_1)
             cϕ_1.sub_(1)  # (cϕ-1)
-
-            ϕ.clamp_(min=1e-12)
-            torch.div(γbeff, ϕ, out=u)
 
             # wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
             # Angle is `-ϕ` as Bloch-eq is 𝑀×𝐵
             # m₁ = R(u, -ϕ)m₀ = cϕ*m₀ + (1-cϕ)*uᵀm₀*u - sϕ*u×m₀
             # m₁ = m₀ - sϕ*u×m₀ + (cϕ-1)*(m₀ - uᵀm₀*u), in-place friendly
             torch.mul(u, m0, out=m1)  # using m₁ as an temporary storage
-            torch.sum(m1, dim=-2, keepdim=True, out=ϕ)  # ϕ reused as uᵀm₀
+            torch.sum(m1, dim=-1, keepdim=True, out=utm0)
 
-            torch.cross(u, m0, dim=-2, out=m1)  # u×m₀
+            torch.cross(u, m0, dim=-1, out=m1)  # u×m₀
             torch.addcmul(m0, sϕ, m1, value=-1, out=m1)  # m₀ - sϕ*(u×m₀)
 
-            torch.addcmul(m0, ϕ, u, value=-1, out=u)  # m₀ - uᵀm₀*u
+            torch.addcmul(m0, utm0, u, value=-1, out=v)  # m₀ - uᵀm₀*u
 
-            torch.addcmul(m1, cϕ_1, u, out=m1)  # m₀-sϕ*u×m₀+(cϕ-1)*(m₀-uᵀm₀*u)
+            torch.addcmul(m1, cϕ_1, v, out=m1)  # m₀-sϕ*u×m₀+(cϕ-1)*(m₀-uᵀm₀*u)
 
             # Relaxation
             fn_relax_(m1)
 
             m0 = m1
 
-        ctx.save_for_backward(Mi, Mhst, γBeff, E, e1_1, γ2πdt)
-        Mo = Mhst[..., -1].clone()  # -> (N, *Nd, xyz)
+        ctx.save_for_backward(
+            Mi, Mhst, γBeff, Φ, cΦ_1, sΦ, UtM0, E, e1_1, γ2πdt
+        )
+        Mo = Mhst[..., -1, :].clone()  # -> (N, *Nd, xyz)
         return Mo
 
     @staticmethod
     def backward(
-        ctx: CTX, grad_Mo: Tensor
+        ctx: CTX,
+        grad_Mo: Tensor
     ) -> Tuple[Tensor, Tensor, None, None, None, None]:
         r"""Backward evolution of Bloch simulation Jacobians
 
@@ -129,7 +145,7 @@ class BlochSim(Function):
         Outputs:
             - ``grad_Mi``: `(N, *Nd, xyz)`, derivative w.r.t. input Magetic \
               spins.
-            - ``grad_Beff``: `(N,*Nd,xyz,nT)`, derivative w.r.t. B-effective.
+            - ``grad_Beff``: `(N,*Nd,nT,xyz)`, derivative w.r.t. B-effective.
             - None*4, this implemendation do not provide derivatives w.r.t.: \
               `T1`, `T2`, `γ`, and `dt`.
         """
@@ -142,7 +158,7 @@ class BlochSim(Function):
 
         # %% Jacobians. If we turn back time,
         # ctx.save_for_backward(Mi, Mhst, γBeff, E, e1_1, γ2πdt)
-        Mi, Mhst, γBeff, E, e1_1, γ2πdt = ctx.saved_tensors
+        Mi, Mhst, γBeff, Φ, cΦ_1, sΦ, UtM0, E, e1_1, γ2πdt = ctx.saved_tensors
         NNd = γBeff.shape[:-2]
         # (t)ensor (k)ey(w)ord, contiguous to avoid alloc/copy when reshape
         tkw = {'memory_format': _contiguous_format,
@@ -150,65 +166,59 @@ class BlochSim(Function):
 
         # assert((E is None) == (e1_1 is None))  # both or neither
         if E is None:  # relaxations ignored
-            fn_relax_h1_ = lambda h1: None  # noqa: E731
-            fn_relax_m1_ = lambda m1: None  # noqa: E731
+            fn_relax_h1_ = lambda h1: None
+            fn_relax_m1_ = lambda m1: None
         else:
-            fn_relax_h1_ = lambda h1: h1.mul_(E)  # noqa: E731
+            fn_relax_h1_ = lambda h1: h1.mul_(E)
 
             def fn_relax_m1_(m1):
-                m1[..., 2:3, :].add_(e1_1)
+                m1[..., :, 2:3].add_(e1_1)
                 m1.div_(E)
                 return
 
         # Pre-allocate intermediate variables, in case of overhead alloc's
-        h0 = torch.empty(NNd+(3, 1), **tkw)
+        h0 = torch.empty(NNd+(1, 3), **tkw)
 
-        u, uxh1 = (torch.empty(NNd+(3, 1), **tkw) for _ in range(2))
-        ϕ, cϕ_1, sϕ, utm0, uth1 = (torch.empty(NNd+(1, 1), **tkw)
-                                   for _ in range(5))
+        u, uxh1 = (torch.empty(NNd+(1, 3), **tkw) for _ in range(2))
+        ϕ, cϕ_1, sϕ, uth1 = (torch.empty(NNd+(1, 1), **tkw) for _ in range(4))
         # ϕis0 = torch.empty(NNd+(1, 1),
         #                    memory_format=tkw['memory_format'],
         #                    device=tkw['device'], dtype=torch.bool)
-        h1 = grad_Mo.clone(memory_format=_contiguous_format)[..., None]
+        h1 = grad_Mo.clone(memory_format=_contiguous_format)[..., None, :]
         # u_dflt = torch.tensor([[0.], [0.], [1.]],  # (xyz, 1)
         #                       device=tkw['device'], dtype=tkw['dtype'])
 
-        m1 = Mhst.narrow(-1, -1, 1)
+        m1 = Mhst.narrow(-2, -1, 1)
 
         # scale by -γ2πdt, so output ∂L/∂B no longer needs multiply by -γ2πdt
         h1.mul_(-γ2πdt)
-        for m0, γbeff in zip(reversed((Mi,)+Mhst.split(1, dim=-1)[:-1]),
-                             reversed(γBeff.split(1, dim=-1))):
+        for m0, γbeff, ϕ, cϕ_1, sϕ, utm0 in zip(
+            reversed((Mi,)+Mhst.split(1, dim=-2)[:-1]),
+            reversed(γBeff.split(1, dim=-2)),
+            reversed(Φ.split(1, dim=-2)),
+            reversed(cΦ_1.split(1, dim=-2)),
+            reversed(sΦ.split(1, dim=-2)),
+            reversed(UtM0.split(1, dim=-2)),
+        ):
             # %% Ajoint Relaxation:
             fn_relax_h1_(h1)  # h₁ → h̃₁ ≔ ∂L/∂m̃₁ = E∂L/∂m₁
             fn_relax_m1_(m1)  # m₁ → m̃₁ ≔ Rm₀ = E⁻¹m₁
 
             # %% Adjoint Rotations:
-            # Prepare all the elements
-            torch.norm(γbeff, dim=-2, keepdim=True, out=ϕ)
-            # compute `sin`, `cos` before `ϕ.clamp_()`
-            torch.sin(ϕ, out=sϕ)
-            torch.cos(ϕ, out=cϕ_1)
-            cϕ_1.sub_(1)
-
-            ϕ.clamp_(min=1e-12)
-            torch.div(γbeff, ϕ, out=u)
+            u.copy_(γbeff)
 
             # TODO: Resolve singularities of ϕ=0, control pov?
             # torch.logical_not(ϕ, out=ϕis0)
             # if torch.any(ϕis0):
             #     u[ϕis0[..., 0, 0]] = u_dflt
 
-            torch.mul(u, m0, out=h0)
-            torch.sum(h0, dim=-2, keepdim=True, out=utm0)  # uᵀm₀
-
             # %% Assemble h₀: (R(u, -ϕ)ᵀ ≡ R(u, ϕ))
             # h₀ ≔ R(u, ϕ)h̃₁ = cϕ*h₁ + (1-cϕ)*uᵀh₁*u + sϕ*u×h₁
             # h₀ = h̃₁ + (cϕ-1)*(h̃₁ - uᵀh̃₁*u) + sϕ*u×h̃₁, in-place friendly
             torch.mul(u, h1, out=h0)  # using h0 as an temporary storage
-            torch.sum(h0, dim=-2, keepdim=True, out=uth1)  # uᵀh̃₁
+            torch.sum(h0, dim=-1, keepdim=True, out=uth1)  # uᵀh̃₁
 
-            torch.cross(u, h1, dim=-2, out=uxh1)  # u×h̃₁
+            torch.cross(u, h1, dim=-1, out=uxh1)  # u×h̃₁
             torch.addcmul(h1, uth1, u, value=-1, out=h0)  # h̃₁-uᵀh̃₁*u
 
             torch.addcmul(h1, cϕ_1, h0, out=h0)  # h̃₁ + (cϕ-1)*(h̃₁-uᵀh̃₁*u)
@@ -226,7 +236,7 @@ class BlochSim(Function):
             #     cϕ_1[ϕis0], sϕ[ϕis0] = 0, 1
 
             # %%% sϕ/ϕ⋅(m₀×h̃₁)
-            torch.cross(m0, h1, dim=-2, out=γbeff)  # m₀×h̃₁
+            torch.cross(m0, h1, dim=-1, out=γbeff)  # m₀×h̃₁
             γbeff.mul_(sϕ)  # sϕ/ϕ⋅(m₀×h̃₁)
 
             # %%% sϕ/ϕ⋅(m₀×h̃₁) + (cϕ-1)/ϕ⋅(uᵀm₀⋅h̃₁+uᵀh̃₁⋅m₀)
@@ -240,7 +250,7 @@ class BlochSim(Function):
             # (m̃₁-sϕ/ϕ⋅m₀)ᵀ(u×h̃₁)
             torch.addcmul(m1, sϕ, m0, value=-1, out=m1)  # (m̃₁-sϕ/ϕ⋅m₀)
             m1.mul_(uxh1)
-            torch.sum(m1, dim=-2, keepdim=True, out=sϕ)
+            torch.sum(m1, dim=-1, keepdim=True, out=sϕ)
 
             # ((m̃₁-sϕ/ϕ⋅m₀)ᵀ(u×h̃₁) + 2(cϕ-1)/ϕ⋅uᵀh̃₁⋅uᵀm₀)
             uth1.mul_(utm0)  # uᵀh̃1⋅uᵀm₀
@@ -254,7 +264,7 @@ class BlochSim(Function):
         grad_Beff = γBeff
 
         # undo the multiply by -γ2πdt on h1
-        grad_Mi = h1[..., 0].div_(-γ2πdt[0, ...]) if needs_grad[0] else None
+        grad_Mi = h1[..., 0, :].div_(-γ2πdt[0, ...]) if needs_grad[0] else None
         # forward(ctx, Mi, Beff; T1, T2, γ, dt):
         return grad_Mi, grad_Beff, grad_T1, grad_T2, grad_γ, grad_dt
 
@@ -276,7 +286,7 @@ def blochsim(
     Inputs:
         - ``Mi``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium \
           [[[0 0 1]]].
-        - ``Beff``: `(N, *Nd, xyz, nT)`, "Gauss", B-effective, magnetic field.
+        - ``Beff``: `(N, *Nd, nT, xyz)`, "Gauss", B-effective, magnetic field.
     Optionals:
         - ``T1``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T1 relaxation.
         - ``T2``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T2 relaxation.

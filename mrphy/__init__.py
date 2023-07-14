@@ -49,7 +49,8 @@ Special keywords used in documentations:
   can be one of the size tuple set, e.g. ``(N, nM ⊻ *Nd, xyz)`` means \
   accepting dimension either ``(N, nM, xyz)`` or ``(N, *Nd, xyz)``.
 """
-import warnings, ctypes
+import ctypes
+import warnings
 
 from math import pi as π, inf  # noqa: F401
 import torch
@@ -84,7 +85,7 @@ def cuda_is_available() -> bool:
 __CUDA_IS_AVAILABLE__ = cuda_is_available()
 
 try:
-    import cupy
+    import cupy  # noqa: F401
     __CUPY_IS_AVAILABLE__ = True
 except ImportError:
     if __CUDA_IS_AVAILABLE__:
@@ -93,7 +94,7 @@ except ImportError:
     __CUPY_IS_AVAILABLE__ = False
 
 
-from mrphy import (utils, beffective, sims, slowsims, mobjs)  # noqa: E402
-from mrphy.version import __version__
+from mrphy import (utils, beffective, sims, slowsims, mobjs)
+from mrphy.version import __version__  # noqa: F401
 
 __all__ = ['γH', 'utils', 'beffective', 'sims', 'slowsims', 'mobjs']

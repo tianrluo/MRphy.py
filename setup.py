@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-import ctypes
 
 
 version = {}
@@ -9,7 +8,7 @@ with open("mrphy/version.py") as fp:
 __version__ = version['__version__']
 
 
-REQUIRED_PACKAGES = ['torch>=1.3', 'numpy', 'scipy']
+REQUIRED_PACKAGES = ['torch>=1.13', 'numpy', 'scipy']
 
 with open("README.md", "r") as h:
     long_description = h.read()
@@ -31,5 +30,5 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.8',
 )

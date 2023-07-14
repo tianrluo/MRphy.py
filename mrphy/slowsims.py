@@ -13,8 +13,13 @@ __all__ = ['blochsim_1step', 'blochsim', 'blochsim_ab', 'freeprec']
 
 
 def blochsim_1step(
-    M: Tensor, M1: Tensor, b: Tensor,
-    E1: Tensor, E1_1: Tensor, E2: Tensor, γ2πdt: Tensor
+    M: Tensor,
+    M1: Tensor,
+    b: Tensor,
+    E1: Tensor,
+    E1_1: Tensor,
+    E2: Tensor,
+    γ2πdt: Tensor,
 ) -> Tuple[Tensor, Tensor]:
     r"""Single step bloch simulation
 
@@ -50,9 +55,12 @@ def blochsim_1step(
 
 
 def blochsim(
-    M: Tensor, Beff: Tensor, *,
-    T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
-    γ: Tensor = γH, dt: Tensor = dt0
+    M: Tensor,
+    Beff: Tensor, *,
+    T1: Optional[Tensor] = None,
+    T2: Optional[Tensor] = None,
+    γ: Tensor = γH,
+    dt: Tensor = dt0
 ) -> Tensor:
     r"""Bloch simulator with implicit Jacobian operations.
 
@@ -62,7 +70,7 @@ def blochsim(
     Inputs:
         - ``M``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium \
           [[[0 0 1]]].
-        - ``Beff``: `(N, *Nd, xyz, nT)`, "Gauss", B-effective, magnetic field.
+        - ``Beff``: `(N, *Nd, nT, xyz)`, "Gauss", B-effective, magnetic field.
     OPTIONALS:
         - ``T1``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T1 relaxation.
         - ``T2``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T2 relaxation.
@@ -90,8 +98,8 @@ def blochsim(
     E1_1, E2, γ2πdt = E1 - 1, E2[..., None], 2*π*γ*dt  # Hz/Gs -> Rad/Gs
 
     # simulation
-    for t in range(Beff.shape[-1]):
-        u, ϕ = beffective.beff2uϕ(Beff[..., t], γ2πdt)
+    for t in range(Beff.shape[-2]):
+        u, ϕ = beffective.beff2uϕ(Beff[..., t, :], γ2πdt)
         if torch.any(ϕ != 0):
             M1 = utils.uϕrot(u, ϕ, M)
         else:

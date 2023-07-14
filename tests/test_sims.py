@@ -26,7 +26,7 @@ class Test_sims:
         *Note*:
         This test relies on the correctness of `test_slowsims.py`.
         """
-        f_t2np = lambda x: x.detach().clone().cpu().numpy()  # noqa: E731
+        f_t2np = lambda x: x.detach().clone().cpu().numpy()
 
         print('\n')
         dkw, atol = self.dkw, self.atol
@@ -79,6 +79,7 @@ class Test_sims:
         res1a.backward()  # keep graph to check `bar.backward()`
         print('backward: slowsims.blochsim', time.time() - t)
         grad_M0_1a = f_t2np(M0.grad)
+        # (..., nT, xyz) → (..., xyz, nT)
         grad_beff_1a = f_t2np(beff.grad)
 
         M0.grad, beff.grad = None, None
@@ -110,6 +111,7 @@ class Test_sims:
         res1b = torch.sum(Mo_1b)
         res1b.backward()  # keep graph to check `bar.backward()`
         grad_M0_1b = f_t2np(M0.grad)
+        # (..., nT, xyz) → (..., xyz, nT)
         grad_beff_1b = f_t2np(beff.grad)
 
         # dur_f, dur_b, n_repeat = 0., 0., 1000
@@ -145,7 +147,7 @@ class Test_sims:
         *Note*:
         This test relies on the correctness of `test_slowsims.py`.
         """
-        f_t2np = lambda x: x.detach().clone().cpu().numpy()  # noqa: E731
+        f_t2np = lambda x: x.detach().clone().cpu().numpy()
 
         print('\n')
         dkw, atol = self.dkw, self.atol

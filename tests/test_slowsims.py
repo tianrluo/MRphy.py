@@ -68,7 +68,7 @@ class Test_slowsims:
 
         Mo2, Mo_tmp = M0.clone(), M0.clone()
         for t in range(nT):
-            Mo2, _ = slowsims.blochsim_1step(Mo2, Mo_tmp, beff[..., t],
+            Mo2, _ = slowsims.blochsim_1step(Mo2, Mo_tmp, beff[..., t, :],
                                              E1, E1_1, E2, γ2πdt)
 
         Mo3 = slowsims.blochsim_ab(M0, A, B)
