@@ -1,8 +1,7 @@
 import torch
 import pytest
-from torch import tensor, cuda
 
-from mrphy import γH, dt0, π
+from mrphy import _TKW, γH, dt0, π
 from mrphy import beffective, sims, slowsims
 
 import time
@@ -10,12 +9,12 @@ import time
 
 class Test_sims:
 
-    device = torch.device('cuda' if cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = torch.device('cpu')
     # dtype, atol = torch.float32, 1e-4
     dtype, atol = torch.float64, 1e-9
 
-    dkw = {'dtype': dtype, 'device': device}
+    dkw: _TKW = {'dtype': dtype, 'device': device}
 
     print(device)
     γ = γH.to(**dkw)  # Hz/Gauss
@@ -41,7 +40,7 @@ class Test_sims:
         M0.requires_grad = True
 
         # parameters: Sec; cm.
-        T1, T2 = tensor([[1.]], **dkw), tensor([[4e-2]], **dkw)
+        T1, T2 = torch.tensor([[1.]], **dkw), torch.tensor([[4e-2]], **dkw)
 
         loc_x = torch.linspace(-1., 1., steps=nM, **dkw).reshape((N,)+Nd)
         loc_y = torch.linspace(-1., 1., steps=nM, **dkw).reshape((N,)+Nd)
@@ -49,7 +48,7 @@ class Test_sims:
         loc = torch.stack([loc_x, loc_y, loc_z], 2)  # (1,nM,xyz)
 
         Δf = -loc_x * γ  # gr_x==1 Gauss/cm cancels Δf
-        b1Map = tensor([1., 0.], **dkw).reshape((N, 1, 2, 1))
+        b1Map = torch.tensor([1., 0.], **dkw).reshape((N, 1, 2, 1))
 
         # pulse: Sec; Gauss; Gauss/cm.
         pulse_size = (N, 1, nT)
@@ -162,7 +161,7 @@ class Test_sims:
 
         # parameters: Sec; cm.
         dur = torch.tensor(0.5, **dkw)
-        T1, T2 = tensor([[1.]], **dkw), tensor([[4e-2]], **dkw)
+        T1, T2 = torch.tensor([[1.]], **dkw), torch.tensor([[4e-2]], **dkw)
 
         loc_x = torch.linspace(-1., 1., steps=nM, **dkw).reshape((N,)+Nd)
 

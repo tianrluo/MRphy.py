@@ -3,28 +3,19 @@ r"""MRphy utilities
 Utilities for data indexing, conversions, spin rotation.
 """
 
-from typing import Any, Tuple, Union
-from numbers import Number
+from typing import Union
 
-import torch
 import numpy as np
-from numpy import ndarray as ndarray_c
-from torch import Tensor
+import torch
 
-from mrphy import γH, dt0, π, __CUPY_IS_AVAILABLE__
-if __CUPY_IS_AVAILABLE__:
-    import cupy as cp
-    from cupy import ndarray as ndarray_g
-    ndarrayA = Union[ndarray_c, ndarray_g]
-else:
-    ndarrayA = ndarray_c
+from mrphy import γH, dt0, π
 
 
 __all__ = ['ctrsub', 'g2k', 'g2s', 'k2g', 'rf_c2r', 'rf_r2c', 'rf2tρθ',
            'rfclamp', 's2g', 's2ts', 'sclamp', 'ts2s', 'tρθ2rf', 'uφrot']
 
 
-def ctrsub(shape: Any) -> Any:
+def ctrsub(shape):
     r"""Compute center subscript indices of a regular grid
 
     Usage:
@@ -33,7 +24,13 @@ def ctrsub(shape: Any) -> Any:
     return shape//2
 
 
-def g2k(g: Tensor, isTx: bool, dt: Tensor = dt0, *, γ: Tensor = γH) -> Tensor:
+def g2k(
+    g: torch.Tensor,
+    isTx: bool,
+    dt: torch.Tensor = dt0,
+    *,
+    γ: torch.Tensor = γH,
+) -> torch.Tensor:
     r"""Compute k-space from gradients.
 
     Usage:
@@ -62,7 +59,10 @@ def g2k(g: Tensor, isTx: bool, dt: Tensor = dt0, *, γ: Tensor = γH) -> Tensor:
     return k
 
 
-def g2s(g: Tensor, dt: Tensor = dt0) -> Tensor:
+def g2s(
+    g: torch.Tensor,
+    dt: torch.Tensor = dt0,
+) -> torch.Tensor:
     r"""Compute slew rates from gradients.
 
     Usage:
@@ -83,7 +83,13 @@ def g2s(g: Tensor, dt: Tensor = dt0) -> Tensor:
     return s
 
 
-def k2g(k: Tensor, isTx: bool, dt: Tensor = dt0, *, γ: Tensor = γH) -> Tensor:
+def k2g(
+    k: torch.Tensor,
+    isTx: bool,
+    dt: torch.Tensor = dt0,
+    *,
+    γ: torch.Tensor = γH,
+) -> torch.Tensor:
     r"""Compute k-space from gradients
 
     Usage:
@@ -111,7 +117,11 @@ def k2g(k: Tensor, isTx: bool, dt: Tensor = dt0, *, γ: Tensor = γH) -> Tensor:
     return g
 
 
-def lρθ2rf(lρ: Tensor, θ: Tensor, rfmax: Tensor) -> Tensor:
+def lρθ2rf(
+    lρ: torch.Tensor,
+    θ: torch.Tensor,
+    rfmax: torch.Tensor,
+) -> torch.Tensor:
     r"""Convert tρ ≔ tan(ρ/ρ_max⋅π/2), and θ to real RF
 
     Usage:
@@ -131,7 +141,7 @@ def lρθ2rf(lρ: Tensor, θ: Tensor, rfmax: Tensor) -> Tensor:
     return lρ.sigmoid()*rfmax*torch.cat((θ.cos(), θ.sin()), dim=1)
 
 
-def rf_c2r(rf: ndarrayA) -> ndarrayA:
+def rf_c2r(rf: np.ndarray) -> np.ndarray:
     r"""Convert complex RF to real RF
 
     Usage:
@@ -144,15 +154,10 @@ def rf_c2r(rf: ndarrayA) -> ndarrayA:
     See Also:
         :func:`~mrphy.utils.rf_r2c`
     """
-    if isinstance(rf, ndarray_c):
-        return np.concatenate((np.real(rf), np.imag(rf)), axis=1)
-    elif __CUPY_IS_AVAILABLE__:  # ndarray_g, i.e., cupy.ndarray
-        return cp.concatenate((cp.real(rf), cp.imag(rf)), axis=1)
-    else:
-        raise TypeError(f'Unknown type: {type(rf)}')
+    return np.concatenate((np.real(rf), np.imag(rf)), axis=1)
 
 
-def rf_r2c(rf: ndarrayA) -> ndarrayA:
+def rf_r2c(rf: np.ndarray) -> np.ndarray:
     r"""Convert real RF to complex RF
 
     Usage:
@@ -169,10 +174,11 @@ def rf_r2c(rf: ndarrayA) -> ndarrayA:
 
 
 def rf2lρθ(
-    rf: Tensor,
-    rfmax: Tensor, *,
-    eps: Number = 1e-7
-) -> Tuple[Tensor, Tensor]:
+    rf: torch.Tensor,
+    rfmax: torch.Tensor,
+    *,
+    eps: float = 1e-7,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """Convert real RF to tρ ≔ tan(ρ/ρ_max⋅π/2), and θ
 
     Usage:
@@ -193,7 +199,10 @@ def rf2lρθ(
     return lρ, θ
 
 
-def rf2tρθ(rf: Tensor, rfmax: Tensor) -> Tuple[Tensor, Tensor]:
+def rf2tρθ(
+    rf: torch.Tensor,
+    rfmax: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
     """Convert real RF to tρ ≔ tan(ρ/ρ_max⋅π/2), and θ
 
     Usage:
@@ -214,7 +223,12 @@ def rf2tρθ(rf: Tensor, rfmax: Tensor) -> Tuple[Tensor, Tensor]:
     return tρ, θ
 
 
-def rfclamp(rf: Tensor, rfmax: Tensor, *, eps: Number = 1e-7) -> Tensor:
+def rfclamp(
+    rf: torch.Tensor,
+    rfmax: torch.Tensor,
+    *,
+    eps: float = 1e-7,
+) -> torch.Tensor:
     r"""Clamp RF to rfmax
 
     Usage:
@@ -236,7 +250,10 @@ def rfclamp(rf: Tensor, rfmax: Tensor, *, eps: Number = 1e-7) -> Tensor:
     return rf.mul(((rfmax[:, None, None, ...]-eps)/rf_abs).clamp_(max=1))
 
 
-def s2g(s: Tensor, dt: Tensor = dt0) -> Tensor:
+def s2g(
+    s: torch.Tensor,
+    dt: torch.Tensor = dt0,
+) -> torch.Tensor:
     r"""Compute gradients from slew rates.
 
     Usage:
@@ -258,7 +275,10 @@ def s2g(s: Tensor, dt: Tensor = dt0) -> Tensor:
     return g
 
 
-def s2ts(s: Tensor, smax: Tensor) -> Tensor:
+def s2ts(
+    s: torch.Tensor,
+    smax: torch.Tensor,
+) -> torch.Tensor:
     r"""Convert slew rate to ts ≔ tan(s/s_max⋅π/2)
 
     Usage:
@@ -275,7 +295,10 @@ def s2ts(s: Tensor, smax: Tensor) -> Tensor:
     return (s/smax[..., None]*π/2).tan()
 
 
-def sclamp(s: Tensor, smax: Tensor) -> Tensor:
+def sclamp(
+    s: torch.Tensor,
+    smax: torch.Tensor,
+) -> torch.Tensor:
     r"""Clamp slew rate to `smax`
 
     Usage:
@@ -293,7 +316,10 @@ def sclamp(s: Tensor, smax: Tensor) -> Tensor:
     return s.max(-smax[..., None]).min(smax[..., None])
 
 
-def ts2s(ts: Tensor, smax: Tensor) -> Tensor:
+def ts2s(
+    ts: torch.Tensor,
+    smax: torch.Tensor,
+) -> torch.Tensor:
     r"""Convert ts ≔ tan(s/s_max⋅π/2) to slew rate
 
     Usage:
@@ -310,7 +336,11 @@ def ts2s(ts: Tensor, smax: Tensor) -> Tensor:
     return ts.atan()/π*2*smax[..., None]
 
 
-def tρθ2rf(tρ: Tensor, θ: Tensor, rfmax: Tensor) -> Tensor:
+def tρθ2rf(
+    tρ: torch.Tensor,
+    θ: torch.Tensor,
+    rfmax: torch.Tensor,
+) -> torch.Tensor:
     r"""Convert tρ ≔ tan(ρ/ρ_max⋅π/2), and θ to real RF
 
     Usage:
@@ -330,7 +360,11 @@ def tρθ2rf(tρ: Tensor, θ: Tensor, rfmax: Tensor) -> Tensor:
     return tρ.atan()/π*2*rfmax*torch.cat((θ.cos(), θ.sin()), dim=1)
 
 
-def uϕrot(U: Tensor, Φ: Tensor, Vi: Tensor) -> Tensor:
+def uϕrot(
+    U: torch.Tensor,
+    Φ: torch.Tensor,
+    Vi: torch.Tensor,
+) -> torch.Tensor:
     r"""Rotate Vi about axis U by Φ
 
     Usage:

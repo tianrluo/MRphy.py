@@ -3,10 +3,8 @@ import torch
 import pytest
 from torch import tensor, cuda
 
-from mrphy import γH, dt0, rfmax0, smax0, __CUPY_IS_AVAILABLE__
+from mrphy import _TKW, γH, dt0, rfmax0, smax0
 from mrphy import utils
-if __CUPY_IS_AVAILABLE__:
-    import cupy as cp
 
 
 # TODO:
@@ -22,7 +20,7 @@ class Test_utils:
     dtype, atol = torch.float32, 1e-4
     # dtype, atol = torch.float64, 1e-9
 
-    dkw = {'dtype': dtype, 'device': device}
+    dkw: _TKW = {'dtype': dtype, 'device': device}
 
     print(device)
     γ = γH.to(**dkw)  # Hz/Gauss
@@ -60,11 +58,6 @@ class Test_utils:
         rf_r_1_np = utils.rf_c2r(utils.rf_r2c(rf_r_0_np))
         assert(rf_r_0_np == pytest.approx(rf_r_1_np, abs=atol))
 
-        if __CUPY_IS_AVAILABLE__:
-            rf_r_0_cp = tmp.astype(cp.double, copy=False)
-            rf_r_1_cp = utils.rf_c2r(utils.rf_r2c(rf_r_0_cp))
-            assert(cp.asnumpy(rf_r_0_cp) ==
-                   pytest.approx(cp.asnumpy(rf_r_1_cp), abs=atol))
         return
 
     def test_rfclamptan(self):

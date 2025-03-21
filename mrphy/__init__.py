@@ -50,12 +50,14 @@ Special keywords used in documentations:
   accepting dimension either ``(N, nM, xyz)`` or ``(N, *Nd, xyz)``.
 """
 import ctypes
-import warnings
 
 from math import pi as π, inf  # noqa: F401
+from typing import TypedDict
+
 import torch
 from torch import tensor
-γH = tensor(4257.6, dtype=torch.double)  # Hz/Gauss, water proton gyro freq.
+
+γH = tensor(4257.6, dtype=torch.double)  # Hz/Gauss, ¹H gyro freq.
 T1G = tensor(1.47, dtype=torch.double)   # Sec, T1 for gray matter
 T2G = tensor(0.07, dtype=torch.double)   # Sec, T2 for gray matter
 
@@ -64,8 +66,14 @@ gmax0 = tensor(5, dtype=torch.double)    # Gauss/cm
 smax0 = tensor(12e3, dtype=torch.double)  # Gauss/cm/Sec
 rfmax0 = tensor(0.25, dtype=torch.double)  # Gauss
 
-_slice = slice(None)
 
+_TKW = TypedDict(
+    '_TKW',
+    {
+        'dtype': torch.dtype,
+        'device': torch.device,
+    },
+)
 
 def cuda_is_available() -> bool:
     r"""Returns `True` if cuda is available"""
@@ -80,18 +88,6 @@ def cuda_is_available() -> bool:
     else:
         return False
     return False
-
-
-__CUDA_IS_AVAILABLE__ = cuda_is_available()
-
-try:
-    import cupy  # noqa: F401
-    __CUPY_IS_AVAILABLE__ = True
-except ImportError:
-    if __CUDA_IS_AVAILABLE__:
-        warnings.warn('Unable to import `cupy` while CUDA is available',
-                      ImportWarning)
-    __CUPY_IS_AVAILABLE__ = False
 
 
 from mrphy import (utils, beffective, sims, slowsims, mobjs)

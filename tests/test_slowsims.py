@@ -1,21 +1,20 @@
 import numpy as np
 import torch
 import pytest
-from torch import tensor, cuda
 
-from mrphy import γH, dt0, π
+from mrphy import _TKW, γH, dt0, π
 from mrphy import beffective, slowsims
 
 
 class Test_slowsims:
 
-    device = torch.device('cuda' if cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = torch.device('cpu')
     # dtype, atol = torch.float32, 1e-4
     dtype, atol = torch.float64, 1e-9
     print(device)
 
-    dkw = {'dtype': dtype, 'device': device}
+    dkw: _TKW = {'dtype': dtype, 'device': device}
 
     γ = γH.to(**dkw)  # Hz/Gauss
     dt = dt0.to(**dkw)  # Sec
@@ -30,12 +29,12 @@ class Test_slowsims:
         γ, dt = self.γ, self.dt
 
         # spins  # (1,nM,xyz)
-        M0 = tensor([[[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]], **dkw)
+        M0 = torch.tensor([[[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]], **dkw)
         N, nM, nT = M0.shape[0], M0.shape[1], 512
         Nd = (nM,)
 
         # parameters: Sec; cm.
-        T1, T2 = tensor([[1.]], **dkw), tensor([[4e-2]], **dkw)
+        T1, T2 = torch.tensor([[1.]], **dkw), torch.tensor([[4e-2]], **dkw)
 
         E1, E2, γ2πdt = torch.exp(-dt/T1), torch.exp(-dt/T2), 2*π*γ*dt
         E1_1 = E1 - 1
@@ -46,7 +45,7 @@ class Test_slowsims:
         loc = torch.stack([loc_x, loc_y, loc_z], 2)  # (1,nM,xyz)
 
         Δf = -loc_x * γ  # gr_x==1 Gauss/cm cancels Δf
-        b1Map = tensor([1., 0.], **dkw).reshape((N, 1, 2, 1))
+        b1Map = torch.tensor([1., 0.], **dkw).reshape((N, 1, 2, 1))
 
         # pulse: Sec; Gauss; Gauss/cm.
         pulse_size = (N, 1, nT)
@@ -102,15 +101,17 @@ class Test_slowsims:
         dkw, atol = self.dkw, self.atol
 
         # spins  # (1,nM,xyz)
-        Mi = tensor([[[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]], **dkw)
+        Mi = torch.tensor([[[1., 0., 0.], [0., 1., 0.], [0., 0., 1.]]], **dkw)
 
-        E1, E2 = tensor([[0.5]], **dkw), tensor([[0.5]], **dkw)  # (1,1)
+        # (1,1)
+        E1, E2 = torch.tensor([[0.5]], **dkw), torch.tensor([[0.5]], **dkw)
 
         # scalar dur, T1, T2
         dur = torch.tensor(0.5, **dkw)
         T1, T2 = -dur/torch.log(E1), -dur/torch.log(E2)  # ()
 
-        Δf = tensor([[1/4/dur, -1/4/dur, 1]], **dkw)  # (1, nM) quater-circle
+        # (1, nM) quater-circle
+        Δf = torch.tensor([[1/4/dur, -1/4/dur, 1]], **dkw)
 
         Mo = slowsims.freeprec(Mi, dur, T1=T1, T2=T2, Δf=Δf)
 

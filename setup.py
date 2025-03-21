@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 
-version = {}
+version: dict = {}
 with open("mrphy/version.py") as fp:
     exec(fp.read(), version)
 

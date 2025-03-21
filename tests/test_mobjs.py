@@ -4,7 +4,7 @@ import torch
 import pytest
 from torch import tensor, cuda
 
-from mrphy import γH, dt0, π, _slice
+from mrphy import _TKW, γH, dt0, π
 from mrphy import mobjs
 
 # TODO:
@@ -51,6 +51,7 @@ def _setup(T1_, T2, γ, device, dtype):
     cube.T2 = T2.expand(cube.shape)  # for test coverage
 
     M001, M100 = tensor([0., 0., 1.], **kw), tensor([1., 0., 0.], **kw)
+    _slice = slice(None)
     crds_100 = cube.crds_([_slice, [0, 1], [1, 0], _slice, _slice])
     cube.M_[crds_100] = M100
     crds_001 = cube.crds_([_slice, [2, 1], [1, 2], _slice, _slice])
@@ -71,7 +72,7 @@ class Test_mobjs:
     dtype, atol = torch.float64, 1e-9
     print(device)
 
-    dkw = {'dtype': dtype, 'device': device}
+    dkw: _TKW = {'dtype': dtype, 'device': device}
 
     γ = γH.to(**dkw)  # Hz/Gauss
     dt = dt0.to(**dkw)  # Sec

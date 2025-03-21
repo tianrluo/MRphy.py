@@ -1,14 +1,9 @@
 r"""Simulation codes with explicit Jacobian operations.
 """
 
-from typing import Tuple, Optional
-
 import torch
-from torch import Tensor
-from torch.autograd import Function
-from torch.autograd.function import _ContextMethodMixin as CTX
 
-from mrphy import γH, dt0, π
+from mrphy import _TKW, γH, dt0, π
 
 
 # TODO:
@@ -18,10 +13,8 @@ from mrphy import γH, dt0, π
 
 __all__ = ['blochsim']
 
-_contiguous_format = torch.contiguous_format
 
-
-class BlochSim(Function):
+class BlochSim(torch.autograd.Function):
     r"""BlochSim with explict Jacobian operation (backward)
 
     This operator is only differentiable w.r.t. ``Mi`` and ``Beff``.
@@ -30,18 +23,18 @@ class BlochSim(Function):
 
     @staticmethod
     def forward(
-        ctx: CTX,
-        Mi: Tensor,
-        Beff: Tensor,
-        T1: Optional[Tensor],
-        T2: Optional[Tensor],
-        γ: Tensor,
-        dt: Tensor
-    ) -> Tensor:
+        ctx: torch.autograd.function.FunctionCtx,
+        Mi: torch.Tensor,
+        Beff: torch.Tensor,
+        T1: torch.Tensor | None,
+        T2: torch.Tensor | None,
+        γ: torch.Tensor,
+        dt: torch.Tensor,
+    ) -> torch.Tensor:
         r"""Forward evolution of Bloch simulation
 
         Inputs:
-            - ``ctx``: `(1,)`, pytorch CTX cacheing object
+            - ``ctx``: `(1,)`, pytorch FunctionCtx cacheing object
             - ``Mi``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium \
               [0 0 1]
             - ``Beff``: `(N, *Nd, nT, xyz)`, "Gauss", B-effective, magnetic \
@@ -55,19 +48,18 @@ class BlochSim(Function):
         """
         NNd, nT = Beff.shape[:-2], Beff.shape[-2]
         # (t)ensor (k)ey(w)ord, contiguous to avoid alloc/copy when reshape
-        tkw = {'memory_format': _contiguous_format,
-               'dtype': Mi.dtype, 'device': Mi.device}
+        tkw: _TKW = {'dtype': Mi.dtype, 'device': Mi.device}
 
         # %% Preprocessing
         γ2πdt = 2*π*γ*dt
         γBeff = torch.empty(Beff.shape, **tkw)
         torch.mul(γ2πdt, Beff, out=γBeff)
-        Mi = Mi.clone(memory_format=_contiguous_format)[..., None, :]
+        Mi = Mi.clone(memory_format=torch.contiguous_format)[..., None, :]
         # γBeff = γ2πdt*Beff.contiguous()
 
         assert((T1 is None) == (T2 is None))  # both or neither
 
-        if T1 is None:  # relaxations ignored
+        if T1 is None or T2 is None:  # relaxations ignored
             E = e1_1 = None
             fn_relax_ = lambda m1: None
         else:
@@ -126,20 +118,27 @@ class BlochSim(Function):
             m0 = m1
 
         ctx.save_for_backward(
-            Mi, Mhst, γBeff, Φ, cΦ_1, sΦ, UtM0, E, e1_1, γ2πdt
+            Mi, Mhst, γBeff, Φ, cΦ_1, sΦ, UtM0, E, e1_1, γ2πdt  # type: ignore
         )
         Mo = Mhst[..., -1, :].clone()  # -> (N, *Nd, xyz)
         return Mo
 
     @staticmethod
-    def backward(
-        ctx: CTX,
-        grad_Mo: Tensor
-    ) -> Tuple[Tensor, Tensor, None, None, None, None]:
+    def backward(  # type: ignore
+        ctx: torch.autograd.function.FunctionCtx,
+        grad_Mo: torch.Tensor,
+    ) -> tuple[
+        torch.Tensor | None,
+        torch.Tensor | None,
+        None,
+        None,
+        None,
+        None,
+    ]:
         r"""Backward evolution of Bloch simulation Jacobians
 
         Inputs:
-            - ``ctx``: `(1,)`, pytorch CTX cacheing object
+            - ``ctx``: `(1,)`, pytorch FunctionCtx cacheing object
             - ``grad_Mo``: `(N, *Nd, xyz)`, derivative w.r.t. output Magetic \
               spins.
         Outputs:
@@ -150,7 +149,7 @@ class BlochSim(Function):
               `T1`, `T2`, `γ`, and `dt`.
         """
         # grads of configuration variables are not supported yet
-        needs_grad = ctx.needs_input_grad
+        needs_grad = ctx.needs_input_grad  # type: ignore
         grad_Beff = grad_Mi = grad_T1 = grad_T2 = grad_γ = grad_dt = None
 
         if not any(needs_grad[0:2]):  # (Mi,Beff;T1,T2,γ,dt):
@@ -158,11 +157,12 @@ class BlochSim(Function):
 
         # %% Jacobians. If we turn back time,
         # ctx.save_for_backward(Mi, Mhst, γBeff, E, e1_1, γ2πdt)
-        Mi, Mhst, γBeff, Φ, cΦ_1, sΦ, UtM0, E, e1_1, γ2πdt = ctx.saved_tensors
+        (
+            Mi, Mhst, γBeff, Φ, cΦ_1, sΦ, UtM0, E, e1_1, γ2πdt,
+        ) = ctx.saved_tensors  # type: ignore
         NNd = γBeff.shape[:-2]
         # (t)ensor (k)ey(w)ord, contiguous to avoid alloc/copy when reshape
-        tkw = {'memory_format': _contiguous_format,
-               'dtype': Mi.dtype, 'device': Mi.device}
+        tkw: _TKW = {'dtype': Mi.dtype, 'device': Mi.device}
 
         # assert((E is None) == (e1_1 is None))  # both or neither
         if E is None:  # relaxations ignored
@@ -184,9 +184,8 @@ class BlochSim(Function):
         # ϕis0 = torch.empty(NNd+(1, 1),
         #                    memory_format=tkw['memory_format'],
         #                    device=tkw['device'], dtype=torch.bool)
-        h1 = grad_Mo.clone(memory_format=_contiguous_format)[..., None, :]
-        # u_dflt = torch.tensor([[0.], [0.], [1.]],  # (xyz, 1)
-        #                       device=tkw['device'], dtype=tkw['dtype'])
+        h1 = grad_Mo.clone(memory_format=torch.contiguous_format)[..., None, :]
+        # u_dflt = torch.tensor([[0.], [0.], [1.]], **tkw) # (xyz, 1)
 
         m1 = Mhst.narrow(-2, -1, 1)
 
@@ -270,10 +269,14 @@ class BlochSim(Function):
 
 
 def blochsim(
-    Mi: Tensor, Beff: Tensor, *,
-    T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
-    γ: Tensor = γH, dt: Tensor = dt0
-) -> Tensor:
+    Mi: torch.Tensor,
+    Beff: torch.Tensor,
+    *,
+    T1: torch.Tensor | None = None,
+    T2: torch.Tensor | None = None,
+    γ: torch.Tensor = γH,
+    dt: torch.Tensor = dt0,
+) -> torch.Tensor:
     r"""Bloch simulator with explicit Jacobian operation.
 
     This function is only differentiable w.r.t. ``Mi`` and ``Beff``.
@@ -308,14 +311,15 @@ def blochsim(
     # Make {γ, dt, T1, T2} compatible with (N, *Nd, :, :)
     γ, dt = (x.reshape(x.shape+(ndim-x.ndim)*(1,)) for x in (γ, dt))
 
-    assert((T1 is None) == (T2 is None))  # both or neither
-    if T1 is not None:
+    if T1 is not None and T2 is not None:
         T1, T2 = (x.reshape(x.shape+(ndim-x.ndim)*(1,)) for x in (T1, T2))
+    else:
+        assert((T1 is None) == (T2 is None))  # both or neither
 
     return BlochSim.apply(Mi, Beff, T1, T2, γ, dt)
 
 
-class FreePrec(Function):
+class FreePrec(torch.autograd.Function):
     r"""Free precession with explicit Jacobian operation (backward)
 
     This operator is only differentiable w.r.t. ``Mi``.
@@ -324,13 +328,17 @@ class FreePrec(Function):
 
     @staticmethod
     def forward(
-        ctx: CTX, Mi: Tensor, dur: Tensor,
-        T1: Optional[Tensor], T2: Optional[Tensor], Δf: Optional[Tensor]
-    ) -> Tensor:
+        ctx: torch.autograd.function.FunctionCtx,
+        Mi: torch.Tensor,
+        dur: torch.Tensor,
+        T1: torch.Tensor | None,
+        T2: torch.Tensor | None,
+        Δf: torch.Tensor | None,
+    ) -> torch.Tensor:
         r"""Forward operation of free precession
 
         Inputs:
-            - ``ctx``: `(1,)`, pytorch CTX cacheing object
+            - ``ctx``: `(1,)`, pytorch FunctionCtx cacheing object
             - ``Mi``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium \
               [0 0 1]
             - ``dur``: `(N ⊻ 1, len(Nd)*(1,), 1)`, "Sec", dwell time.
@@ -341,7 +349,7 @@ class FreePrec(Function):
             - ``Mo``: `(N, *Nd, xyz)`, Magetic spins after simulation.
         """  # could we learn to live right.
 
-        Mo = Mi.clone(memory_format=_contiguous_format)
+        Mo = Mi.clone(memory_format=torch.contiguous_format)
 
         # Precession
         cϕ = sϕ = tmp = None
@@ -350,38 +358,41 @@ class FreePrec(Function):
             cϕ = torch.cos(sϕ)
             sϕ.sin_()  # ϕ is now sϕ
 
-            tmp = Mo[..., 0].clone(memory_format=_contiguous_format)  # Mix
+            # Mix
+            tmp = Mo[..., 0].clone(memory_format=torch.contiguous_format)
             Mo[..., 0].mul_(cϕ)  # cϕ*Mix
-            torch.addcmul(Mo[..., 0], sϕ, Mo[..., 1], value=-1,
-                          out=Mo[..., 0])  # Mox = cϕ*Mix - sϕ*Miy
+            # Mox = cϕ*Mix - sϕ*Miy
+            torch.addcmul(Mo[..., 0], sϕ, Mo[..., 1], value=-1, out=Mo[..., 0])
 
             Mo[..., 1].mul_(cϕ)
-            torch.addcmul(Mo[..., 1], sϕ, tmp,
-                          out=Mo[..., 1])  # Moy = sϕ*Mix + cϕ*Miy
+            # Moy = sϕ*Mix + cϕ*Miy
+            torch.addcmul(Mo[..., 1], sϕ, tmp, out=Mo[..., 1])
 
         # Relaxation
         E1 = E2 = E1_1 = None
-        assert((T1 is None) == (T2 is None))  # both or neither
 
-        if T1 is not None:
+        if T1 is not None and T2 is not None:
             E1, E2 = -dur/T1, -dur/T2
             E1_1 = torch.expm1(E1)  # E1 - 1
             E1.exp_(), E2.exp_()  # should have fewer alloc than exp(-dt/T1)
             Mo[..., 0:2].mul_(E2)
             Mo[..., 2:3].mul_(E1).sub_(E1_1)
+        else:
+            assert((T1 is None) == (T2 is None))  # both or neither
 
-        ctx.save_for_backward(cϕ, sϕ, E1, E2, tmp)
+        ctx.save_for_backward(cϕ, sϕ, E1, E2, tmp)  # type: ignore
 
         return Mo
 
     @staticmethod
-    def backward(
-        ctx: CTX, grad_Mo: Tensor
-    ) -> Tuple[Tensor, None, None, None, None]:
+    def backward(  # type: ignore
+        ctx: torch.autograd.function.FunctionCtx,
+        grad_Mo: torch.Tensor,
+    ) -> tuple[torch.Tensor | None, None, None, None, None]:
         r"""Backward operation of free precession
 
         Inputs:
-            - ``ctx``: `(1,)`, pytorch CTX cacheing object
+            - ``ctx``: `(1,)`, pytorch FunctionCtx cacheing object
             - ``grad_Mo``: `(N, *Nd, xyz)`, derivative w.r.t. output Magetic \
               spins.
         Outputs:
@@ -391,16 +402,16 @@ class FreePrec(Function):
               `dur`, `T1`, `T2`, and `Δf`.
         """  # If we turn back time,
         # grads of configuration variables are not supported yet
-        needs_grad = ctx.needs_input_grad
+        needs_grad = ctx.needs_input_grad  # type: ignore
         grad_Mi = grad_dur = grad_T1 = grad_T2 = grad_Δf = None
 
         if not any(needs_grad[0:1]):
             return grad_Mi, grad_dur, grad_T1, grad_T2, grad_Δf
 
-        grad_Mi = grad_Mo.clone(memory_format=_contiguous_format)
+        grad_Mi = grad_Mo.clone(memory_format=torch.contiguous_format)
 
         # ctx.save_for_backward(cϕ, sϕ, E1, E2, E1_1)
-        cϕ, sϕ, E1, E2, tmp = ctx.saved_tensors
+        cϕ, sϕ, E1, E2, tmp = ctx.saved_tensors  # type: ignore
 
         # Relaxation
         if E1 is not None:
@@ -422,10 +433,13 @@ class FreePrec(Function):
 
 
 def freeprec(
-    Mi: Tensor, dur: Tensor, *,
-    T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
-    Δf: Optional[Tensor] = None
-) -> Tensor:
+    Mi: torch.Tensor,
+    dur: torch.Tensor,
+    *,
+    T1: torch.Tensor | None = None,
+    T2: torch.Tensor | None = None,
+    Δf: torch.Tensor | None = None,
+) -> torch.Tensor:
     r"""Isochromats free precession with given relaxation and off-resonance
 
     This function is only differentiable w.r.t. ``Mi``.
@@ -448,9 +462,10 @@ def freeprec(
     ndim = Mi.ndim  # dur, T1, T2, Δf are reshaped to be compatible w/ M
     dur = dur.reshape(dur.shape+(ndim-dur.ndim)*(1,))
 
-    assert((T1 is None) == (T2 is None))  # both or neither
-    if T1 is not None:  # → (N ⊻ 1, *Nd ⊻ len(Nd)*(1,), 1)
+    if T1 is not None and T2 is not None:  # → (N ⊻ 1, *Nd ⊻ len(Nd)*(1,), 1)
         T1, T2 = (x.reshape(x.shape+(ndim-x.ndim)*(1,)) for x in (T1, T2))
+    else:
+        assert((T1 is None) == (T2 is None))  # both or neither
 
     if Δf is not None:  # → (N ⊻ 1, *Nd ⊻ len(Nd)*(1,))
         Δf = Δf.reshape(Δf.shape+(ndim-1-Δf.ndim)*(1,))

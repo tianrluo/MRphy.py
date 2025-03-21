@@ -2,10 +2,8 @@ r"""Simulation codes with implicit Jacobian operations.
 """
 
 import torch
-from torch import tensor, Tensor
-from typing import Optional, Tuple
 
-from mrphy import γH, dt0, π
+from mrphy import _TKW, γH, dt0, π
 from mrphy import utils, beffective
 
 
@@ -13,14 +11,14 @@ __all__ = ['blochsim_1step', 'blochsim', 'blochsim_ab', 'freeprec']
 
 
 def blochsim_1step(
-    M: Tensor,
-    M1: Tensor,
-    b: Tensor,
-    E1: Tensor,
-    E1_1: Tensor,
-    E2: Tensor,
-    γ2πdt: Tensor,
-) -> Tuple[Tensor, Tensor]:
+    M: torch.Tensor,
+    M1: torch.Tensor,
+    b: torch.Tensor,
+    E1: torch.Tensor,
+    E1_1: torch.Tensor,
+    E2: torch.Tensor,
+    γ2πdt: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
     r"""Single step bloch simulation
 
     Usage:
@@ -55,13 +53,14 @@ def blochsim_1step(
 
 
 def blochsim(
-    M: Tensor,
-    Beff: Tensor, *,
-    T1: Optional[Tensor] = None,
-    T2: Optional[Tensor] = None,
-    γ: Tensor = γH,
-    dt: Tensor = dt0
-) -> Tensor:
+    M: torch.Tensor,
+    Beff: torch.Tensor,
+    *,
+    T1: torch.Tensor | None = None,
+    T2: torch.Tensor | None  = None,
+    γ: torch.Tensor = γH,
+    dt: torch.Tensor = dt0,
+) -> torch.Tensor:
     r"""Bloch simulator with implicit Jacobian operations.
 
     Usage:
@@ -86,9 +85,9 @@ def blochsim(
     device, dtype, ndim = M.device, M.dtype, M.ndim-1
 
     # defaults and move to the same device
-    dkw = {'device': device, 'dtype': dtype}
-    E1 = tensor(1, **dkw) if (T1 is None) else torch.exp(-dt/T1.to(device))
-    E2 = tensor(1, **dkw) if (T2 is None) else torch.exp(-dt/T2.to(device))
+    dkw: _TKW = {'device': device, 'dtype': dtype}
+    E1 = torch.tensor(1, **dkw) if T1 is None else torch.exp(-dt/T1.to(device))
+    E2 = torch.tensor(1, **dkw) if T2 is None else torch.exp(-dt/T2.to(device))
     Beff, γ, dt = (x.to(device) for x in (Beff, γ, dt))
 
     # preprocessing
@@ -114,7 +113,11 @@ def blochsim(
     return M
 
 
-def blochsim_ab(M: Tensor, A: Tensor, B: Tensor) -> Tensor:
+def blochsim_ab(
+    M: torch.Tensor,
+    A: torch.Tensor,
+    B: torch.Tensor,
+) -> torch.Tensor:
     r"""Bloch simulation via Hargreave's mat/vec representation
 
     Usage:
@@ -132,10 +135,13 @@ def blochsim_ab(M: Tensor, A: Tensor, B: Tensor) -> Tensor:
 
 
 def freeprec(
-    M: Tensor, dur: Tensor, *,
-    T1: Optional[Tensor] = None, T2: Optional[Tensor] = None,
-    Δf: Optional[Tensor] = None
-) -> Tensor:
+    M: torch.Tensor,
+    dur: torch.Tensor,
+    *,
+    T1: torch.Tensor | None = None,
+    T2: torch.Tensor | None = None,
+    Δf: torch.Tensor | None = None,
+) -> torch.Tensor:
     r"""Isochromats free precession with given relaxation and off-resonance
 
     Usage:
@@ -164,11 +170,12 @@ def freeprec(
         Mx, My = cϕ*Mx-sϕ*My, sϕ*Mx+cϕ*My
 
     # Relaxation
-    assert((T1 is None) == (T2 is None))  # both or neither
-    if T1 is not None:
+    if T1 is not None and T2 is not None:
         T1, T2 = (x.reshape(x.shape+(ndim-x.ndim)*(1,)) for x in (T1, T2))
         E1, E2 = torch.exp(-dur/T1), torch.exp(-dur/T2)
         Mx, My, Mz = E2*Mx, E2*My, E1*Mz+1-E1
+    else:
+        assert((T1 is None) == (T2 is None))  # both or neither
 
     M = torch.cat((Mx, My, Mz), dim=-1)  # (N, *Nd, xyz)
     return M
