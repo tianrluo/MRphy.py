@@ -286,7 +286,7 @@ def blochsim(
     Inputs:
         - ``Mi``: `(N, *Nd, xyz)`, Magnetic spins, assumed equilibrium \
           [[[0 0 1]]].
-        - ``Beff``: `(N, *Nd, nT, xyz)`, "Gauss", B-effective, magnetic field.
+        - ``Beff``: `(N ⊻ 1, *Nd, nT, xyz)`, "Gauss", B-effective, magnetic field.
     Optionals:
         - ``T1``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T1 relaxation.
         - ``T2``: `()` ⊻ `(N ⊻ 1, *Nd ⊻ 1,)`, "Sec", T2 relaxation.
@@ -302,6 +302,8 @@ def blochsim(
     """
 
     # %% Defaults and move to the same device
+    if Beff.shape[0] != Mi.shape[0]:
+        Beff = Beff.expand(Mi.shape[0], *Beff.shape[1:])
     assert(Mi.shape[:-1] == Beff.shape[:-2])
     Beff, ndim = Beff.to(Mi.device), Beff.ndim
 
