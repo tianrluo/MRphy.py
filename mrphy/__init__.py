@@ -16,6 +16,7 @@ Submodules:
     - :mod:`~mrphy.sims`
     - :mod:`~mrphy.slowsims`
     - :mod:`~mrphy.mobjs`
+    - :mod:`~mrphy.steady_state`
 
 General Comments:
 =================
@@ -95,6 +96,7 @@ except ImportError:
 
 
 from mrphy import (utils, beffective, sims, slowsims, mobjs)
+from mrphy import steady_state
 from mrphy.version import __version__  # noqa: F401
 
-__all__ = ['γH', 'utils', 'beffective', 'sims', 'slowsims', 'mobjs']
+__all__ = ['γH', 'utils', 'beffective', 'sims', 'slowsims', 'mobjs', 'steady_state']
